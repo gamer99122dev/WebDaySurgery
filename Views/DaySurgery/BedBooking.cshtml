@@ -1,43 +1,47 @@
 @{
     ViewData["Title"] = "預定床位";
-    var dateFrom = DateTime.Today;
-    var dateTo = dateFrom.AddDays(3);
+    DateTime dateS = ViewBag.DateS;
+    DateTime dateE = ViewBag.DateE;
 }
 
 <h1>@ViewData["Title"]</h1>
 
-<div class="row g-2 align-items-end" style="max-width: 32rem;">
-    <div class="col-auto">
-        <label for="dateFrom" class="form-label">起</label>
-        <input type="date" id="dateFrom" name="dateFrom" class="form-control" value="@dateFrom.ToString("yyyy-MM-dd")" />
+<form method="post" id="queryForm">
+    <div class="row g-2 align-items-end" style="max-width: 32rem;">
+        <div class="col-auto">
+            <label for="DateS" class="form-label">起</label>
+            <input type="date" id="DateS" name="DateS" class="form-control" value="@dateS.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-auto">
+            <label for="DateE" class="form-label">迄</label>
+            <input type="date" id="DateE" name="DateE" class="form-control" value="@dateE.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">查詢</button>
+        </div>
     </div>
-    <div class="col-auto">
-        <label for="dateTo" class="form-label">迄</label>
-        <input type="date" id="dateTo" name="dateTo" class="form-control" value="@dateTo.ToString("yyyy-MM-dd")" />
-    </div>
-    <div class="col-auto">
-        <button type="button" class="btn btn-primary">查詢</button>
-    </div>
-</div>
 
-<div class="btn-group mt-2" role="group">
-    <button type="button" class="btn btn-outline-secondary" data-days="3">三天</button>
-    <button type="button" class="btn btn-outline-secondary" data-days="5">五天</button>
-    <button type="button" class="btn btn-outline-secondary" data-days="7">七天</button>
-</div>
+    <div class="btn-group mt-2" role="group">
+        <button type="button" class="btn btn-outline-secondary" data-days="3">三天</button>
+        <button type="button" class="btn btn-outline-secondary" data-days="5">五天</button>
+        <button type="button" class="btn btn-outline-secondary" data-days="7">七天</button>
+    </div>
+</form>
 
 @section Scripts {
 <script>
-    // 快捷天數：迄 = 起 + N 天（起沒填就用今天）
+    // 快捷天數：迄 = 起 + N 天，設好直接送出查詢
     document.querySelectorAll('[data-days]').forEach(btn => btn.addEventListener('click', () => {
-        const from = document.getElementById('dateFrom');
+        const from = document.getElementById('DateS');
         const base = from.value ? new Date(from.value + 'T00:00:00') : new Date();
         base.setHours(0, 0, 0, 0);
         from.value = toInputDate(base);
 
         const to = new Date(base);
         to.setDate(to.getDate() + Number(btn.dataset.days));
-        document.getElementById('dateTo').value = toInputDate(to);
+        document.getElementById('DateE').value = toInputDate(to);
+
+        document.getElementById('queryForm').submit();
     }));
 
     // 不能用 toISOString()，那個會轉成 UTC 讓日期倒退一天
