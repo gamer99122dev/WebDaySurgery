@@ -24,8 +24,7 @@ namespace WebDaySurgery.Controllers
             ViewBag.DateS = dateS;
             ViewBag.DateE = dateE;
 
-            // 先只抓資料，還沒綁到 View
-            DataTable dt = QueryResv(dateS, dateE);
+            ViewBag.Resv = QueryResv(dateS, dateE);
 
             return View();
         }
@@ -42,7 +41,7 @@ namespace WebDaySurgery.Controllers
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
             string sDateE = DateE.pRyyymmdd().pSQLValidator();
 
-            string SQL = "SELECT chRsReason, chRsPSec, * ";
+            string SQL = "SELECT chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
             SQL += $"\n FROM DB_ADM..AdmResvTbl ";
             SQL += $"\n WHERE ";
             SQL += $"\n chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";

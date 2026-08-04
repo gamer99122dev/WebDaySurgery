@@ -1,7 +1,12 @@
+@using System.Data
+@using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "預定床位";
     DateTime dateS = ViewBag.DateS;
     DateTime dateE = ViewBag.DateE;
+    DataTable resv = ViewBag.Resv;
+
+    const int BedsPerDay = 4;  // 一天的床位數
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -27,6 +32,100 @@
         <button type="button" class="btn btn-outline-secondary" data-days="7">七天</button>
     </div>
 </form>
+
+<table class="table table-bordered align-middle mt-3 bed-table">
+    <tbody>
+        @for (DateTime d = dateS; d <= dateE; d = d.AddDays(1))
+        {
+            @* DB 存民國年月日，直接用字串比對，不用轉回 DateTime *@
+            DataRow[] booked = resv.Select($"chRsPDate = '{d.pRyyymmdd()}'");
+
+            <tr>
+                @* 加括號隔開，否則 Razor 會把後面的 (...) 當成方法呼叫 *@
+                <th class="bed-date @(d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday ? "bed-weekend" : "")">@(d.ToString("yyyy/MM/dd"))<span class="bed-week">(@d.pToDayOfWeekCh())</span></th>
+                @for (int i = 0; i < BedsPerDay; i++)
+                {
+                    if (i < booked.Length)
+                    {
+                        <td class="bed-slot bed-booked">
+                            <div class="bed-sec">@booked[i]["chRsPSec"]</div>
+                            <div class="bed-dr">@booked[i]["chRsDrID1Name"]</div>
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="bed-slot bed-empty"></td>
+                    }
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<style>
+    .bed-table {
+        max-width: 52rem;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+    }
+
+    .bed-table td, .bed-table th {
+        border: 0;
+        border-bottom: 1px solid #e9ecef;
+        border-right: 1px solid #e9ecef;
+        padding: .5rem;
+    }
+
+    .bed-table tr:last-child td, .bed-table tr:last-child th { border-bottom: 0; }
+    .bed-table td:last-child { border-right: 0; }
+
+    /* hover 只作用在空床位；原本整列 hover 會蓋掉已預訂格的底色，讓白字消失 */
+    .bed-slot.bed-empty:hover { background-color: #e9ecef; }
+
+    .bed-date {
+        width: 14rem;
+        font-size: 1.1rem;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;  /* 數字等寬，日期才會對齊 */
+        background-color: #f8f9fa;
+        color: #212529;
+        white-space: nowrap;
+    }
+
+    .bed-week { color: #495057; margin-left: .25rem; }
+    .bed-weekend, .bed-weekend .bed-week { color: #c92a2a; }
+
+    .bed-slot { height: 5.5rem; text-align: center; vertical-align: middle; }
+
+    /* 空床位：平的淺灰，不做任何裝飾，跟「有卡片」的已預訂格一眼區分 */
+    .bed-empty { background-color: #f1f3f5; }
+
+    /* 已預訂：淺底深字。高齡者水晶體混濁會讓亮字在暗底上散光，深底白字反而最難讀 */
+    .bed-booked {
+        background-color: #e7f5ff;
+        box-shadow: inset 4px 0 0 #1864ab;   /* 左側粗色條，不靠顏色也看得出被佔用 */
+        line-height: 1.4;
+    }
+
+    .bed-sec {
+        display: inline-block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: #1864ab;   /* 對比 6.4:1 */
+        border-radius: .25rem;
+        padding: .1rem .55rem;
+        margin-bottom: .25rem;
+    }
+
+    /* 醫師姓名是這張表最重要的資訊，字級最大、最深 */
+    .bed-dr { font-size: 1.35rem; font-weight: 700; color: #212529; }
+</style>
 
 @section Scripts {
 <script>
