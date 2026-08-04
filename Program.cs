@@ -3,6 +3,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddScoped(_ => new WebToolNet.DBConn.DBConn
+{
+    connectString = builder.Configuration.GetConnectionString("HIS")
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
