@@ -26,7 +26,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=DaySurgery}/{action=BedBooking}/{id?}")
+    pattern: "{controller=DaySurgery}/{action=PatientList}/{id?}")
     .WithStaticAssets();
 
 

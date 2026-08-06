@@ -1,5 +1,87 @@
+@using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "查詢病人清單";
+    DateTime opDate = ViewBag.OPDate;
+
+    // 示意用假資料，只為了看版面。接 DB 後整段連同下面的 foreach 換掉
+    var mock = new[]
+    {
+        new { Name = "王大明", MrNo = "0012345", Sex = "男", Sec = "06", Dr = "陳建志", OP = "腹腔鏡膽囊切除術", Plan = "08:30 OR3", Lab = "已完成", Exam = "待排" },
+        new { Name = "李美華", MrNo = "0023456", Sex = "女", Sec = "08", Dr = "林淑芬", OP = "白內障超音波乳化術", Plan = "09:00 OR1", Lab = "已完成", Exam = "已完成" },
+        new { Name = "張文彬", MrNo = "0034567", Sex = "男", Sec = "VC", Dr = "黃俊傑", OP = "人工血管植入術", Plan = "10:15 OR2", Lab = "待採檢", Exam = "已完成" },
+        new { Name = "陳雅婷", MrNo = "0045678", Sex = "女", Sec = "06", Dr = "陳建志", OP = "腹股溝疝氣修補術", Plan = "13:30 OR3", Lab = "已完成", Exam = "待排" },
+    };
 }
 
 <h1>@ViewData["Title"]</h1>
+
+@* 兩個獨立查詢，各自一個 form。條碼槍刷病歷號等於打完數字再按 Enter，分開才不會誤送日期那張 *@
+<div class="d-flex flex-wrap align-items-end gap-4">
+
+    @* 主動線：看某一天的手術名單。改日期就直接查，不用再按一次按鈕 *@
+    <form method="post">
+        <label for="OPDate" class="form-label">手術日期 (西元)</label>
+        <div class="d-flex gap-2">
+            <input type="date" id="OPDate" name="OPDate" class="form-control" style="width: 10rem;"
+                   value="@opDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+            <div class="btn-group">
+                <button type="submit" name="Nav" value="prev" class="btn btn-outline-secondary">‹ 前一日</button>
+                <button type="submit" name="Nav" value="today" class="btn btn-outline-secondary">今日</button>
+                <button type="submit" name="Nav" value="next" class="btn btn-outline-secondary">後一日 ›</button>
+            </div>
+        </div>
+    </form>
+
+    @* 例外查詢：直接找特定某個人 *@
+    <form method="post">
+        <label for="ChartNo" class="form-label">病歷號</label>
+        <div class="d-flex gap-2">
+            <input type="text" id="ChartNo" name="ChartNo" class="form-control" style="width: 9rem;"
+                   inputmode="numeric" autocomplete="off" maxlength="10" />
+            <button type="submit" class="btn btn-primary text-nowrap">查病歷號</button>
+        </div>
+    </form>
+
+</div>
+
+<h2 class="h5 mt-4 mb-2">
+    @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh()) 病患清單
+    <span class="text-muted fw-normal">— @mock.Length 筆</span>
+    <span class="badge text-bg-warning align-middle">示意假資料</span>
+</h2>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+            <tr class="text-nowrap">
+                <th>預定住院手術日期</th>
+                <th>病人姓名</th>
+                <th>病歷號</th>
+                <th>性別</th>
+                <th>科別</th>
+                <th>醫師</th>
+                <th>術式</th>
+                <th>手術排程</th>
+                <th>檢驗</th>
+                <th>檢查</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in mock)
+            {
+                <tr>
+                    <td class="text-nowrap">@opDate.ToString("yyyy/MM/dd")</td>
+                    <td class="text-nowrap">@r.Name</td>
+                    <td class="text-nowrap">@r.MrNo</td>
+                    <td>@r.Sex</td>
+                    <td>@r.Sec</td>
+                    <td class="text-nowrap">@r.Dr</td>
+                    <td>@r.OP</td>
+                    <td class="text-nowrap">@r.Plan</td>
+                    <td class="text-nowrap">@r.Lab</td>
+                    <td class="text-nowrap">@r.Exam</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

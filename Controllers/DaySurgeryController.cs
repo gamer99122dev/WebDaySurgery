@@ -30,7 +30,24 @@ namespace WebDaySurgery.Controllers
         }
 
         // 階段一 (2) 查詢病人清單
-        public IActionResult PatientList() => View();
+        public IActionResult PatientList(DateTime? OPDate, string? Nav)
+        {
+            // 沒帶參數就是首次載入，預設當天
+            DateTime opDate = OPDate ?? DateTime.Today;
+
+            // 前一日／今日／後一日，日期算在後端，前端不用 JS 也不會踩到 UTC 倒退一天
+            opDate = Nav switch
+            {
+                "prev" => opDate.AddDays(-1),
+                "next" => opDate.AddDays(1),
+                "today" => DateTime.Today,
+                _ => opDate,
+            };
+
+            ViewBag.OPDate = opDate;
+
+            return View();
+        }
 
         /// <summary>
         /// 查詢指定日期區間、指定科別、尚未產生住院號的預約住院資料
