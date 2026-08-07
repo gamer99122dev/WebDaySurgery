@@ -42,6 +42,10 @@
     <span class="text-muted fw-normal">— @patients.Rows.Count 筆</span>
 </h2>
 
+@* 整張表包一個 form，點列＝送出該列的病歷號查檢驗，病歷號走 POST 不進網址 *@
+<form method="post" asp-action="LabResult" id="labForm">
+<input type="hidden" name="OPDate" value="@opDate.ToString("yyyy-MM-dd")" />
+
 <div class="table-responsive">
     <table class="table table-bordered table-hover align-middle">
         <thead class="table-light">
@@ -61,9 +65,12 @@
         <tbody>
             @foreach (DataRow r in patients.Rows)
             {
-                <tr>
+                <tr style="cursor: pointer;">
                     <td class="text-nowrap">@opDate.ToString("yyyy/MM/dd")</td>
-                    <td class="text-nowrap">@r["chRsPName"]</td>
+                    @* 姓名做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
+                    <td class="text-nowrap">
+                        <button type="submit" name="MrNo" value="@r["chRsMrNo"]" class="btn btn-link p-0 align-baseline">@r["chRsPName"]</button>
+                    </td>
                     <td class="text-nowrap">@r["chRsMrNo"]</td>
                     <td>@r["chRsPSex"]</td>
                     <td>@r["chRsPSec"]</td>
@@ -77,3 +84,13 @@
         </tbody>
     </table>
 </div>
+</form>
+
+@section Scripts {
+<script>
+    // 點整列＝點該列姓名那顆按鈕。姓名本身有 button，點它會重複觸發，所以跳過
+    document.querySelectorAll('#labForm tbody tr').forEach(tr => tr.addEventListener('click', e => {
+        if (!e.target.closest('button')) tr.querySelector('button[name="MrNo"]').click();
+    }));
+</script>
+}

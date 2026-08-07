@@ -1,0 +1,90 @@
+@using System.Data
+@using WebToolNet.UtilExtension
+@{
+    ViewData["Title"] = "檢驗資料";
+    DateTime opDate = ViewBag.OPDate;
+    DataRow patient = ViewBag.Patient;
+    DataTable labs = ViewBag.Labs;
+}
+
+@functions {
+    // 對到 OPD 主程式的底色：+ 過高、W 警示 → 紅底白字；- 過低 → 綠底白字；E 不判定 → 黃底黑字
+    static string FlagClass(string RPFlag) => RPFlag switch
+    {
+        "+" or "W" => "text-bg-danger",
+        "-" => "text-bg-success",
+        "E" => "text-bg-warning",
+        _ => "",
+    };
+}
+
+@* 清單是 POST 查詢、日期不在網址，用瀏覽器上一頁會跳「確認重新送出表單」，所以自己送一張回去 *@
+<form method="post" asp-action="PatientList" class="mb-3">
+    <input type="hidden" name="OPDate" value="@opDate.ToString("yyyy-MM-dd")" />
+    <button type="submit" class="btn btn-outline-secondary">‹ 返回病患清單</button>
+</form>
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="border rounded bg-light p-3 mb-3">
+    <span class="fs-4 fw-bold">@patient["chRsPName"]</span>
+    <span class="fs-5 text-muted ms-3">@patient["chRsMrNo"]</span>
+    <span class="ms-3">@patient["chRsPSex"]</span>
+    <span class="ms-3">科別 @patient["chRsPSec"]</span>
+    <span class="ms-3">醫師 @patient["chRsDrID1Name"]</span>
+    <span class="ms-3">手術日期 @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh())</span>
+</div>
+
+<h2 class="h5 mb-2">
+    檢驗項目
+    <span class="text-muted fw-normal">— 手術日往前三個月，@labs.Rows.Count 筆</span>
+</h2>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+            <tr class="text-nowrap">
+                <th>類別</th>
+                <th>檢體</th>
+                <th>報告日期</th>
+                <th>修改時間</th>
+                <th>檢驗項目</th>
+                <th class="text-end">檢驗值</th>
+                <th>單位</th>
+                <th class="text-end">低值</th>
+                <th class="text-end">高值</th>
+                <th>來源</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                string prevLReqNo = "";
+                string prevVfDTM = "";
+            }
+            @foreach (DataRow r in labs.Rows)
+            {
+                @* OPD 同一個檢體編號只在第一列顯示類別／檢體，報告日期則是變動時才顯示 *@
+                bool newSpeci = r.pCol("chLReqNo") != prevLReqNo;
+                bool newVfDTM = newSpeci || r.pCol("chVfDTM") != prevVfDTM;
+                prevLReqNo = r.pCol("chLReqNo");
+                prevVfDTM = r.pCol("chVfDTM");
+
+                <tr>
+                    <td class="text-nowrap">@(newSpeci ? r.pCol("chTeamNam") : "")</td>
+                    <td class="text-nowrap">@(newSpeci ? r.pCol("chSpeci") : "")</td>
+                    @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位 *@
+                    <td class="text-nowrap">@(newVfDTM ? r.pCol("chVfDTM").pLeft(11).pSyyymmddhhmm() : "")</td>
+                    @* 修改時間跟類別／檢體一樣，同一張報告只在第一列顯示 *@
+                    <td class="text-nowrap">@(newSpeci ? r.pCol("chModDTM2").pLeft(11).pSyyymmddhhmm() : "")</td>
+                    <td>@r.pCol("chHead")</td>
+                    <td class="text-end @FlagClass(r.pCol("RPFlag"))" style="font-variant-numeric: tabular-nums;">@r.pCol("chVal")</td>
+                    <td class="text-nowrap">@r.pCol("chUnit")</td>
+                    <td class="text-end text-nowrap">@r.pCol("chNL")</td>
+                    <td class="text-end text-nowrap">@r.pCol("chNH")</td>
+                    @* OPD 是看檢體編號前兩碼分外院／院內，不是看 chSTNam *@
+                    <td class="text-nowrap">@(r.pCol("chLReqNo").pLeft(2) == "80" ? "四方" : "山東")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
