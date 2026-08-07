@@ -26,13 +26,27 @@
 
 <h1>@ViewData["Title"]</h1>
 
+@* 上排是身分（姓名／病歷號／性別），下排是本次手術的欄位，標題小字放值上面。窄螢幕靠 flex-wrap 自己折 *@
 <div class="border rounded bg-light p-3 mb-3">
-    <span class="fs-4 fw-bold">@patient["chRsPName"]</span>
-    <span class="fs-5 text-muted ms-3">@patient["chRsMrNo"]</span>
-    <span class="ms-3">@patient.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</span>
-    <span class="ms-3">科別 @Sec[patient.pCol("chRsPSec")]</span>
-    <span class="ms-3">醫師 @patient["chRsDrID1Name"]</span>
-    <span class="ms-3">手術日期 @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh())</span>
+    <div class="d-flex flex-wrap align-items-baseline gap-3">
+        <span class="fs-4 fw-bold">@patient["chRsPName"]</span>
+        <span class="fs-5 text-muted">@patient["chRsMrNo"]</span>
+        <span class="text-muted">@patient.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</span>
+    </div>
+    <div class="d-flex flex-wrap gap-4 mt-3">
+        <div>
+            <div class="small text-muted">科別</div>
+            <div class="text-nowrap">@Sec[patient.pCol("chRsPSec")]</div>
+        </div>
+        <div>
+            <div class="small text-muted">醫師</div>
+            <div class="text-nowrap">@patient["chRsDrID1Name"]</div>
+        </div>
+        <div>
+            <div class="small text-muted">手術日期</div>
+            <div class="text-nowrap">@opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh())</div>
+        </div>
+    </div>
 </div>
 
 <h2 class="h5 mb-2">
