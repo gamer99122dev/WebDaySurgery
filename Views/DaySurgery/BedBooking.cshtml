@@ -48,7 +48,7 @@
                     if (i < booked.Length)
                     {
                         <td class="bed-slot bed-booked">
-                            <div class="bed-sec">@booked[i]["chRsPSec"]</div>
+                            <div class="bed-sec">@Sec[booked[i].pCol("chRsPSec")]</div>
                             <div class="bed-dr">@booked[i]["chRsDrID1Name"]</div>
                         </td>
                     }

@@ -8,6 +8,10 @@ builder.Services.AddScoped(_ => new WebToolNet.DBConn.DBConn
     connectString = builder.Configuration.GetConnectionString("HIS")
 });
 
+// 科別代碼表查詢，資料本身快取在 IMemoryCache，跨請求共用
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<WebDaySurgery.Services.SectionName>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

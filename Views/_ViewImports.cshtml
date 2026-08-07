@@ -1,2 +1,4 @@
 ﻿@using WebDaySurgery
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@* 每個頁面都能直接用 Sec["科別代碼"] 轉中文，不用各自塞 ViewBag *@
+@inject WebDaySurgery.Services.SectionName Sec
