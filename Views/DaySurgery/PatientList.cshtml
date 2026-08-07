@@ -72,7 +72,7 @@
                         <button type="submit" name="MrNo" value="@r["chRsMrNo"]" class="btn btn-link p-0 align-baseline">@r["chRsPName"]</button>
                     </td>
                     <td class="text-nowrap">@r["chRsMrNo"]</td>
-                    <td>@r["chRsPSex"]</td>
+                    <td>@r.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</td>
                     <td class="text-nowrap">@Sec[r.pCol("chRsPSec")]</td>
                     <td class="text-nowrap">@r["chRsDrID1Name"]</td>
                     <td>—</td>

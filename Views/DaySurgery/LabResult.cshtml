@@ -29,7 +29,7 @@
 <div class="border rounded bg-light p-3 mb-3">
     <span class="fs-4 fw-bold">@patient["chRsPName"]</span>
     <span class="fs-5 text-muted ms-3">@patient["chRsMrNo"]</span>
-    <span class="ms-3">@patient["chRsPSex"]</span>
+    <span class="ms-3">@patient.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</span>
     <span class="ms-3">科別 @Sec[patient.pCol("chRsPSec")]</span>
     <span class="ms-3">醫師 @patient["chRsDrID1Name"]</span>
     <span class="ms-3">手術日期 @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh())</span>
