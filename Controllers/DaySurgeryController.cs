@@ -45,6 +45,7 @@ namespace WebDaySurgery.Controllers
             };
 
             ViewBag.OPDate = opDate;
+            ViewBag.Patients = QueryResv(opDate, opDate);
 
             return View();
         }
@@ -58,7 +59,7 @@ namespace WebDaySurgery.Controllers
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
             string sDateE = DateE.pRyyymmdd().pSQLValidator();
 
-            string SQL = "SELECT chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
+            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
             SQL += $"\n FROM DB_ADM..AdmResvTbl ";
             SQL += $"\n WHERE ";
             SQL += $"\n chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
