@@ -4,6 +4,17 @@
     DateTime opDate = ViewBag.OPDate;
     Resv patient = ViewBag.Patient;
     List<Lab> labs = ViewBag.Labs;
+
+    // 篩選選項，字面要跟 DB 的 chHead 一樣才對得到；最後的「其他」是不在這份清單裡的項目
+    string[] labItems = new[]
+    {
+        "BUN", "CREA", "Na", "K", "AST", "ALT", "GLU(PC)",
+        "WBC", "RBC", "Hb", "Hct", "MCV", "MCH", "MCHC", "Platelet", "RDW",
+        "NEU", "LYM", "MONO", "EOS", "BASO",
+        "NEU#", "LYM#", "MONO#", "EOS#", "BASO#",
+        "P.T.", "PT.INR", "MNPT", "APTT", "APTT RATIO",
+        "其他",
+    };
 }
 
 @functions {
@@ -48,9 +59,26 @@
     </div>
 </div>
 
+@* 預設全勾＝全部顯示，要看什麼再取消掉其他的。「其他」是名稱不在上面清單裡的列 (含 eGFR、TLC 這些計算列) *@
+<div id="labFilter" class="d-flex flex-wrap align-items-center gap-3 border rounded p-3 mb-3">
+    <div class="btn-group btn-group-sm">
+        <button type="button" id="labAll" class="btn btn-outline-secondary">全選</button>
+        <button type="button" id="labNone" class="btn btn-outline-secondary">全部取消</button>
+    </div>
+
+    @for (int i = 0; i < labItems.Length; i++)
+    {
+        @* 項目名稱有空白／# (APTT RATIO、NEU#) 不能直接當 id，改用序號 *@
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="lab-@i" value="@labItems[i]" checked />
+            <label class="form-check-label text-nowrap" for="lab-@i">@labItems[i]</label>
+        </div>
+    }
+</div>
+
 <h2 class="h5 mb-2">
     檢驗項目
-    <span class="text-muted fw-normal">— 手術日往前三個月，@labs.Count 筆</span>
+    <span class="text-muted fw-normal">— 手術日往前三個月，<span id="labCount">@labs.Count</span> 筆</span>
 </h2>
 
 <div class="table-responsive">
@@ -82,13 +110,17 @@
                 prevLReqNo = r.LReqNo;
                 prevVfDTM = r.VfDTM;
 
-                <tr>
-                    <td class="text-nowrap">@(newSpeci ? r.TeamNam : "")</td>
-                    <td class="text-nowrap">@(newSpeci ? r.Speci : "")</td>
-                    @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位 *@
-                    <td class="text-nowrap">@(newVfDTM ? r.VfDTM.pLeft(11).pSyyymmddhhmm() : "")</td>
+                @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位 *@
+                string vfDTM = r.VfDTM.pLeft(11).pSyyymmddhhmm();
+                string modDTM = r.ModDTM.pLeft(11).pSyyymmddhhmm();
+
+                @* data-v 是這一列原本的值：篩選藏列後群組的第一列會換人，JS 要靠它重算哪幾格該顯示 *@
+                <tr data-head="@r.Head" data-lreq="@r.LReqNo" data-vf="@r.VfDTM">
+                    <td class="text-nowrap" data-v="@r.TeamNam">@(newSpeci ? r.TeamNam : "")</td>
+                    <td class="text-nowrap" data-v="@r.Speci">@(newSpeci ? r.Speci : "")</td>
+                    <td class="text-nowrap" data-v="@vfDTM">@(newVfDTM ? vfDTM : "")</td>
                     @* 修改時間跟類別／檢體一樣，同一張報告只在第一列顯示 *@
-                    <td class="text-nowrap">@(newSpeci ? r.ModDTM.pLeft(11).pSyyymmddhhmm() : "")</td>
+                    <td class="text-nowrap" data-v="@modDTM">@(newSpeci ? modDTM : "")</td>
                     <td>@r.Head</td>
                     <td class="text-end @FlagClass(r.RPFlag)" style="font-variant-numeric: tabular-nums;">@r.Val</td>
                     <td class="text-nowrap">@r.Unit</td>
@@ -101,3 +133,54 @@
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+<script>
+    // 資料整份都在畫面上了，篩選就是藏列，不用回後端重查
+    const boxes = [...document.querySelectorAll('#labFilter input[type="checkbox"]')];
+    const rows = [...document.querySelectorAll('tbody tr')];
+    const known = new Set(boxes.map(b => b.value.toUpperCase()).filter(v => v !== '其他'));
+
+    // 藏完列之後，每組的第一列會換人，類別／檢體／日期要重新算一次貼在哪一列
+    function regroup() {
+        let prevLReq = null, prevVf = null;
+
+        rows.filter(tr => !tr.hidden).forEach(tr => {
+            const newSpeci = tr.dataset.lreq !== prevLReq;
+            const newVf = newSpeci || tr.dataset.vf !== prevVf;
+            prevLReq = tr.dataset.lreq;
+            prevVf = tr.dataset.vf;
+
+            // 前四格依序是 類別／檢體／報告日期／修改時間，只有報告日期是看 newVf
+            [newSpeci, newSpeci, newVf, newSpeci].forEach((show, i) => {
+                tr.cells[i].textContent = show ? tr.cells[i].dataset.v : '';
+            });
+        });
+    }
+
+    function apply() {
+        const picked = new Set(boxes.filter(b => b.checked).map(b => b.value.toUpperCase()));
+        const other = picked.delete('其他');   // 拿掉「其他」，剩下的才是真的項目名稱
+
+        rows.forEach(tr => {
+            const head = tr.dataset.head.toUpperCase();
+            tr.hidden = !(picked.has(head) || (other && !known.has(head)));
+        });
+
+        document.getElementById('labCount').textContent = rows.filter(tr => !tr.hidden).length;
+        regroup();
+    }
+
+    function setAll(on) {
+        boxes.forEach(b => b.checked = on);
+        apply();
+    }
+
+    boxes.forEach(b => b.addEventListener('change', apply));
+    document.getElementById('labAll').addEventListener('click', () => setAll(true));
+    document.getElementById('labNone').addEventListener('click', () => setAll(false));
+
+    // 重新整理時瀏覽器會把勾選狀態記回來，但表格是後端重新產生的全部列，先跑一次對齊
+    apply();
+</script>
+}
