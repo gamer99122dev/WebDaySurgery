@@ -1,10 +1,9 @@
-@using System.Data
 @using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "檢驗資料";
     DateTime opDate = ViewBag.OPDate;
-    DataRow patient = ViewBag.Patient;
-    DataTable labs = ViewBag.Labs;
+    Resv patient = ViewBag.Patient;
+    List<Lab> labs = ViewBag.Labs;
 }
 
 @functions {
@@ -29,18 +28,18 @@
 @* 上排是身分（姓名／病歷號／性別），下排是本次手術的欄位，標題小字放值上面。窄螢幕靠 flex-wrap 自己折 *@
 <div class="border rounded bg-light p-3 mb-3">
     <div class="d-flex flex-wrap align-items-baseline gap-3">
-        <span class="fs-4 fw-bold">@patient["chRsPName"]</span>
-        <span class="fs-5 text-muted">@patient["chRsMrNo"]</span>
-        <span class="text-muted">@patient.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</span>
+        <span class="fs-4 fw-bold">@patient.PName</span>
+        <span class="fs-5 text-muted">@patient.MrNo</span>
+        <span class="text-muted">@patient.Sex.pMapValue("1", "男", "0", "女")</span>
     </div>
     <div class="d-flex flex-wrap gap-4 mt-3">
         <div>
             <div class="small text-muted">科別</div>
-            <div class="text-nowrap">@Sec[patient.pCol("chRsPSec")]</div>
+            <div class="text-nowrap">@Sec[patient.SecNo]</div>
         </div>
         <div>
             <div class="small text-muted">醫師</div>
-            <div class="text-nowrap">@patient["chRsDrID1Name"]</div>
+            <div class="text-nowrap">@patient.DrName</div>
         </div>
         <div>
             <div class="small text-muted">手術日期</div>
@@ -51,7 +50,7 @@
 
 <h2 class="h5 mb-2">
     檢驗項目
-    <span class="text-muted fw-normal">— 手術日往前三個月，@labs.Rows.Count 筆</span>
+    <span class="text-muted fw-normal">— 手術日往前三個月，@labs.Count 筆</span>
 </h2>
 
 <div class="table-responsive">
@@ -75,28 +74,28 @@
                 string prevLReqNo = "";
                 string prevVfDTM = "";
             }
-            @foreach (DataRow r in labs.Rows)
+            @foreach (Lab r in labs)
             {
                 @* OPD 同一個檢體編號只在第一列顯示類別／檢體，報告日期則是變動時才顯示 *@
-                bool newSpeci = r.pCol("chLReqNo") != prevLReqNo;
-                bool newVfDTM = newSpeci || r.pCol("chVfDTM") != prevVfDTM;
-                prevLReqNo = r.pCol("chLReqNo");
-                prevVfDTM = r.pCol("chVfDTM");
+                bool newSpeci = r.LReqNo != prevLReqNo;
+                bool newVfDTM = newSpeci || r.VfDTM != prevVfDTM;
+                prevLReqNo = r.LReqNo;
+                prevVfDTM = r.VfDTM;
 
                 <tr>
-                    <td class="text-nowrap">@(newSpeci ? r.pCol("chTeamNam") : "")</td>
-                    <td class="text-nowrap">@(newSpeci ? r.pCol("chSpeci") : "")</td>
+                    <td class="text-nowrap">@(newSpeci ? r.TeamNam : "")</td>
+                    <td class="text-nowrap">@(newSpeci ? r.Speci : "")</td>
                     @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位 *@
-                    <td class="text-nowrap">@(newVfDTM ? r.pCol("chVfDTM").pLeft(11).pSyyymmddhhmm() : "")</td>
+                    <td class="text-nowrap">@(newVfDTM ? r.VfDTM.pLeft(11).pSyyymmddhhmm() : "")</td>
                     @* 修改時間跟類別／檢體一樣，同一張報告只在第一列顯示 *@
-                    <td class="text-nowrap">@(newSpeci ? r.pCol("chModDTM2").pLeft(11).pSyyymmddhhmm() : "")</td>
-                    <td>@r.pCol("chHead")</td>
-                    <td class="text-end @FlagClass(r.pCol("RPFlag"))" style="font-variant-numeric: tabular-nums;">@r.pCol("chVal")</td>
-                    <td class="text-nowrap">@r.pCol("chUnit")</td>
-                    <td class="text-end text-nowrap">@r.pCol("chNL")</td>
-                    <td class="text-end text-nowrap">@r.pCol("chNH")</td>
+                    <td class="text-nowrap">@(newSpeci ? r.ModDTM.pLeft(11).pSyyymmddhhmm() : "")</td>
+                    <td>@r.Head</td>
+                    <td class="text-end @FlagClass(r.RPFlag)" style="font-variant-numeric: tabular-nums;">@r.Val</td>
+                    <td class="text-nowrap">@r.Unit</td>
+                    <td class="text-end text-nowrap">@r.NL</td>
+                    <td class="text-end text-nowrap">@r.NH</td>
                     @* OPD 是看檢體編號前兩碼分外院／院內，不是看 chSTNam *@
-                    <td class="text-nowrap">@(r.pCol("chLReqNo").pLeft(2) == "80" ? "四方" : "山東")</td>
+                    <td class="text-nowrap">@(r.LReqNo.pLeft(2) == "80" ? "四方" : "山東")</td>
                 </tr>
             }
         </tbody>

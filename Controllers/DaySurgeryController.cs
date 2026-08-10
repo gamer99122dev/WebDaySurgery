@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using WebDaySurgery.Models;
 using WebToolNet.HIS2BusinessRule;
 using WebToolNet.myDateTime;
 using WebToolNet.UtilExtension;
@@ -59,21 +60,19 @@ namespace WebDaySurgery.Controllers
         public IActionResult LabResult(string MrNo, DateTime OPDate)
         {
             // 清單本來就查過這一天，直接從同一份結果撈這個人，不用為了表頭再查一次
-            DataRow[] found = QueryResv(OPDate, OPDate).Select($"chRsMrNo = '{MrNo.pSQLValidator()}'");
+            Resv? patient = QueryResv(OPDate, OPDate).FirstOrDefault(p => p.MrNo == MrNo.pNullOrTrim());
 
             // 查不到多半是清單開著、資料被別人改掉了，退回清單重查
-            if (found.Length == 0) return RedirectToAction(nameof(PatientList));
+            if (patient == null) return RedirectToAction(nameof(PatientList));
 
             ViewBag.OPDate = OPDate;
-            ViewBag.Patient = found[0];
+            ViewBag.Patient = patient;
 
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
-            DataRow? basic = QueryPatientBasic(MrNo);
-            string birthday = basic == null ? "" : basic.pCol("chBirthday");
-            string sex = basic == null ? "" : basic.pCol("chSex");
+            (string birthday, string sex) = QueryPatientBasic(MrNo);
 
             // 術前檢驗抓手術日往前三個月，更早的多半不是這次手術要看的
-            DataTable labs = QueryLab(MrNo, OPDate.AddMonths(-3), OPDate);
+            List<Lab> labs = QueryLab(MrNo, OPDate.AddMonths(-3), OPDate);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -81,9 +80,9 @@ namespace WebDaySurgery.Controllers
         }
 
         /// <summary>
-        /// 查病歷號的生日與性別，算 eGFR 用
+        /// 查病歷號的生日與性別，算 eGFR 用；查不到回兩個空字串
         /// </summary>
-        private DataRow? QueryPatientBasic(string MrNo)
+        private (string Birthday, string Sex) QueryPatientBasic(string MrNo)
         {
             string SQL = "SELECT chBirthday, chSex ";
             SQL += $"\n FROM DB_OPD..OpdMRBasicTbl ";
@@ -92,28 +91,28 @@ namespace WebDaySurgery.Controllers
 
             DataTable dt = _db.executesqldt(SQL);
 
-            return dt.Rows.Count == 0 ? null : dt.Rows[0];
+            // 只有兩個欄位、也只有這裡用，不值得為它開一個類別
+            return dt.Rows.Count == 0 ? ("", "") : (dt.Rows[0].pCol("chBirthday"), dt.Rows[0].pCol("chSex"));
         }
 
         /// <summary>
         /// 照 OPD 主程式 (ClinicalDataDetailLabNormal) 的規則補上計算列，並用同樣的順序排序
         /// </summary>
-        private DataTable AddCalcRows(DataTable Labs, string Birthday, string Sex)
+        private List<Lab> AddCalcRows(List<Lab> Labs, string Birthday, string Sex)
         {
             Computing computing = new Computing();
             DateComputing dateComputing = new DateComputing();
 
             int age = Birthday == "" ? 0 : Birthday.pAge().pToInt();
 
-            // 原始列先整批搬過去，計算列再往後加；同組要撈另一個值時一律查原始表，才不會撈到自己算出來的列
-            DataTable table = Labs.Clone();
-            foreach (DataRow row in Labs.Rows) table.ImportRow(row);
+            // 原始列先整批搬過去，計算列再往後加；同組要撈另一個值時一律查原始清單，才不會撈到自己算出來的列
+            List<Lab> rows = new List<Lab>(Labs);
 
-            foreach (DataRow row in Labs.Rows)
+            foreach (Lab row in Labs)
             {
-                string ordNo = row.pCol("chOrdNo");
-                string head = row.pCol("chHead");
-                string val = row.pCol("chVal");
+                string ordNo = row.OrdNo;
+                string head = row.Head;
+                string val = row.Val;
 
                 if (val == "") continue;
 
@@ -121,87 +120,94 @@ namespace WebDaySurgery.Controllers
                 if (head == "CREA" && double.TryParse(val, out _))
                 {
                     if (age != 0 && Sex != "")
-                        AddCalcRow(table, row, "eGFR(MDRD)", "ml/min/1.73㎡", computing.geteGFR(val, age, Sex), 2, "90", "");
+                        AddCalcRow(rows, row, "eGFR(MDRD)", "ml/min/1.73㎡", computing.geteGFR(val, age, Sex), 2, "90", "");
 
                     // CKD-EPI 要用當次採檢日的年齡，不能用現在的年齡，否則同一筆報告的值會隨時間變動
                     if (Birthday != "" && Sex != "")
                     {
-                        int rcpAge = dateComputing.TWDsAge(Birthday, row.pCol("chRcpDTM").pLeft(7)).pToInt();
+                        int rcpAge = dateComputing.TWDsAge(Birthday, row.RcpDTM.pLeft(7)).pToInt();
 
                         if (rcpAge != 0)
-                            AddCalcRow(table, row, "eGFR(CKD-EPI新公式)", "ml/min/1.73㎡", computing.geteGFRCKDEPI(val, rcpAge, Sex), 2, "90", "");
+                            AddCalcRow(rows, row, "eGFR(CKD-EPI新公式)", "ml/min/1.73㎡", computing.geteGFRCKDEPI(val, rcpAge, Sex), 2, "90", "");
                     }
                 }
 
                 // UPCR
                 if (ordNo == "L090404" && head.ToUpper().Contains("URINE"))
                 {
-                    string crea = SameGroupVal(Labs, row, "chOrdNo = 'L090161'", SameRcpDTM: true);
+                    string crea = SameGroupVal(Labs, row, r => EqNoCase(r.OrdNo, "L090161"), SameRcpDTM: true);
                     if (crea.pToDouble() > 0)
-                        AddCalcRow(table, row, "UPCR", "mg/g", computing.getUPCR(val, crea), 1, "0", "150");
+                        AddCalcRow(rows, row, "UPCR", "mg/g", computing.getUPCR(val, crea), 1, "0", "150");
                 }
 
                 // UACR
-                if (ordNo == "L12111" && row.pCol("chItemSeq") == "01")
+                if (ordNo == "L12111" && row.ItemSeq == "01")
                 {
-                    string crea = SameGroupVal(Labs, row, "chOrdNo = 'L090161'", SameRcpDTM: true);
+                    string crea = SameGroupVal(Labs, row, r => EqNoCase(r.OrdNo, "L090161"), SameRcpDTM: true);
                     if (crea.pToDouble() > 0)
-                        AddCalcRow(table, row, "UACR", "mg/g", computing.getUACR(val, crea), 1, "", "");
+                        AddCalcRow(rows, row, "UACR", "mg/g", computing.getUACR(val, crea), 1, "", "");
                 }
 
                 // 24 小時 Urine T.P
                 if (ordNo == "L090401" && head.ToUpper().Contains("URINE"))
                 {
-                    string volume = SameGroupVal(Labs, row, "chHead = 'Volume'");
+                    string volume = SameGroupVal(Labs, row, r => EqNoCase(r.Head, "Volume"));
                     if (volume != "")
-                        AddCalcRow(table, row, "24小時Urine T.P", "mg/day", computing.get24HR_Urine_TP(volume, val), 1, "", "");
+                        AddCalcRow(rows, row, "24小時Urine T.P", "mg/day", computing.get24HR_Urine_TP(volume, val), 1, "", "");
                 }
 
                 // TSAT
                 if (ordNo == "L09035" && head.ToUpper().Contains("TIBC"))
                 {
-                    string iron = SameGroupVal(Labs, row, "chHead = 'IRON'");
+                    string iron = SameGroupVal(Labs, row, r => EqNoCase(r.Head, "IRON"));
                     if (iron != "" && val.pToDouble() > 0)
-                        AddCalcRow(table, row, "TSAT", "%", computing.getTSAT(iron, val), 2, "20", "");
+                        AddCalcRow(rows, row, "TSAT", "%", computing.getTSAT(iron, val), 2, "20", "");
                 }
 
                 // TLC
-                if (head == "LYM" && row.pCol("chUnit") == "%")
+                if (head == "LYM" && row.Unit == "%")
                 {
-                    string wbc = SameGroupVal(Labs, row, "chHead = 'WBC'");
+                    string wbc = SameGroupVal(Labs, row, r => EqNoCase(r.Head, "WBC"));
                     if (double.TryParse(wbc, out _) && double.TryParse(val, out _))
-                        AddCalcRow(table, row, "TLC", "cells/mm3", computing.getTLC(wbc, val), 1, "2000", "", KeepOrdNo: true);
+                        AddCalcRow(rows, row, "TLC", "cells/mm3", computing.getTLC(wbc, val), 1, "2000", "", KeepOrdNo: true);
                 }
             }
 
-            table.DefaultView.Sort = "chTeamSeq, chGReqNo, chOrdNo, chReqNo desc, chVfDTM, chItemSeq asc";
-
-            return table.DefaultView.ToTable();
+            // 對到原本 DefaultView.Sort 的 "chTeamSeq, chGReqNo, chOrdNo, chReqNo desc, chVfDTM, chItemSeq asc"
+            return rows.OrderBy(r => r.TeamSeq)
+                       .ThenBy(r => r.GReqNo)
+                       .ThenBy(r => r.OrdNo)
+                       .ThenByDescending(r => r.ReqNo)
+                       .ThenBy(r => r.VfDTM)
+                       .ThenBy(r => r.ItemSeq)
+                       .ToList();
         }
+
+        // DataTable.Select 的字串比對本來就不分大小寫，改用 LINQ 後要自己補回來，
+        // 否則 'Volume' 比不到 DB 存的 'VOLUME'
+        private static bool EqNoCase(string A, string B) => string.Equals(A, B, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// 照 OPD 主程式的規則，替每一列算出檢驗值的顏色旗標：+ 過高、- 過低、E 不判定、W 警示
         /// </summary>
-        private static DataTable AddReportFlag(DataTable Labs)
+        private static List<Lab> AddReportFlag(List<Lab> Labs)
         {
-            Labs.Columns.Add("RPFlag", typeof(string));
-
-            foreach (DataRow r in Labs.Rows)
+            foreach (Lab r in Labs)
             {
                 // 外送的報告一律不判
-                if (r.pCol("chSTCod") != "")
+                if (r.STCod != "")
                 {
-                    r["RPFlag"] = "E";
+                    r.RPFlag = "E";
                     continue;
                 }
 
                 // 四方的報告直接看它給的 itemflag；但 eGFR/UACR/UPCR 是 HIS 自己算的，要自己判高低
-                bool bLabsSource = r.pCol("chLReqNo").pLeft(2) == "80";
-                bool selfGenLab = r.pCol("chHead").pIn("eGFR(MDRD)", "eGFR(CKD-EPI新公式)", "UACR", "UPCR");
+                bool bLabsSource = r.LReqNo.pLeft(2) == "80";
+                bool selfGenLab = r.Head.pIn("eGFR(MDRD)", "eGFR(CKD-EPI新公式)", "UACR", "UPCR");
 
-                r["RPFlag"] = bLabsSource && !selfGenLab
-                    ? LabItemFlagColor(r.pCol("itemflag"))
-                    : LabReportColor(r.pCol("chVal"), r.pCol("chNL"), r.pCol("chNH"));
+                r.RPFlag = bLabsSource && !selfGenLab
+                    ? LabItemFlagColor(r.ItemFlag)
+                    : LabReportColor(r.Val, r.NL, r.NH);
             }
 
             return Labs;
@@ -361,43 +367,40 @@ namespace WebDaySurgery.Controllers
         }
 
         /// <summary>
-        /// 同一組 (chGReqNo 相同，UPCR／UACR 還要 chRcpDTM 也相同) 裡，符合條件又有值的第一筆 chVal
+        /// 同一組 (GReqNo 相同，UPCR／UACR 還要 RcpDTM 也相同) 裡，符合條件又有值的第一筆檢驗值
         /// </summary>
-        private static string SameGroupVal(DataTable Labs, DataRow Row, string Filter, bool SameRcpDTM = false)
+        private static string SameGroupVal(List<Lab> Labs, Lab Row, Func<Lab, bool> Match, bool SameRcpDTM = false)
         {
-            string f = $"chGReqNo = '{Row.pCol("chGReqNo").pRowfilterValidator()}' AND ISNULL(chVal,'') <> '' AND ({Filter})";
+            Lab? found = Labs.FirstOrDefault(r => r.GReqNo == Row.GReqNo
+                                               && r.Val != ""
+                                               && Match(r)
+                                               && (!SameRcpDTM || r.RcpDTM == Row.RcpDTM));
 
-            if (SameRcpDTM) f += $" AND chRcpDTM = '{Row.pCol("chRcpDTM").pRowfilterValidator()}'";
-
-            DataRow[] found = Labs.Select(f);
-
-            return found.Length == 0 ? "" : found[0].pCol("chVal");
+            return found == null ? "" : found.Val;
         }
 
         /// <summary>
         /// 複製來源列再改掉項目名稱、值、單位、高低值，當成一筆計算列附在後面
         /// </summary>
-        private static void AddCalcRow(DataTable Table, DataRow Src, string Head, string Unit, double Val, int Digits, string NL, string NH, bool KeepOrdNo = false)
+        private static void AddCalcRow(List<Lab> Rows, Lab Src, string Head, string Unit, double Val, int Digits, string NL, string NH, bool KeepOrdNo = false)
         {
-            DataRow r = Table.NewRow();
-            r.ItemArray = Src.ItemArray;
+            Rows.Add(Src with
+            {
+                Head = Head,
+                Unit = Unit,
+                Val = Math.Round(Val, Digits).ToString(),
+                NL = NL,
+                NH = NH,
 
-            r["chHead"] = Head;
-            r["chUnit"] = Unit;
-            r["chVal"] = Math.Round(Val, Digits).ToString();
-            r["chNL"] = NL;
-            r["chNH"] = NH;
-
-            // 計算列不是醫令，chOrdNo 清掉；只有 TLC 要留著才排得到 LYM 旁邊
-            if (!KeepOrdNo) r["chOrdNo"] = "";
-
-            Table.Rows.Add(r);
+                // 計算列不是醫令，OrdNo 清掉；只有 TLC 要留著才排得到 LYM 旁邊
+                OrdNo = KeepOrdNo ? Src.OrdNo : "",
+            });
         }
 
         /// <summary>
         /// 查詢指定病歷號、指定日期區間內已收件的檢驗結果
         /// </summary>
-        private DataTable QueryLab(string MrNo, DateTime DateS, DateTime DateE)
+        private List<Lab> QueryLab(string MrNo, DateTime DateS, DateTime DateE)
         {
             string sMrNo = MrNo.pSQLValidator();
 
@@ -424,13 +427,34 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n AND B.chRcpDTM BETWEEN '{sDateS}' AND '{sDateE}' ";
             SQL += $"\n ORDER BY B.chGReqNo, B.chLReqNo, B.chReqNo";
 
-            return _db.executesqldt(SQL);
+            // SELECT 還有幾個目前沒人用的欄位 (chPName、chCommt、chAppDTM…)，用到再補上來
+            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Lab
+            {
+                GReqNo = r.pCol("chGReqNo"),
+                LReqNo = r.pCol("chLReqNo"),
+                ReqNo = r.pCol("chReqNo"),
+                OrdNo = r.pCol("chOrdNo"),
+                Head = r.pCol("chHead"),
+                Speci = r.pCol("chSpeci"),
+                Val = r.pCol("chVal"),
+                Unit = r.pCol("chUnit"),
+                NL = r.pCol("chNL"),
+                NH = r.pCol("chNH"),
+                RcpDTM = r.pCol("chRcpDTM"),
+                VfDTM = r.pCol("chVfDTM"),
+                ModDTM = r.pCol("chModDTM2"),
+                TeamNam = r.pCol("chTeamNam"),
+                TeamSeq = r.pCol("chTeamSeq"),
+                STCod = r.pCol("chSTCod"),
+                ItemSeq = r.pCol("chItemSeq"),
+                ItemFlag = r.pCol("itemflag"),
+            }).ToList();
         }
 
         /// <summary>
         /// 查詢指定日期區間、指定科別、尚未產生住院號的預約住院資料
         /// </summary>
-        private DataTable QueryResv(DateTime DateS, DateTime DateE)
+        private List<Resv> QueryResv(DateTime DateS, DateTime DateE)
         {
             // DB 存的是民國年月日 (1150730)，不是西元
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
@@ -443,7 +467,16 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
             SQL += $"\n AND chRsAdmCaseNo IS NULL";
 
-            return _db.executesqldt(SQL);
+            // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
+            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
+            {
+                PName = r.pCol("chRsPName"),
+                MrNo = r.pCol("chRsMrNo"),
+                Sex = r.pCol("chRsPSex"),
+                SecNo = r.pCol("chRsPSec"),
+                DrName = r.pCol("chRsDrID1Name"),
+                PDate = r.pCol("chRsPDate"),
+            }).ToList();
         }
     }
 }

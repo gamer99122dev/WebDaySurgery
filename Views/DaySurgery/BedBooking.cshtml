@@ -1,10 +1,9 @@
-@using System.Data
 @using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "預定床位";
     DateTime dateS = ViewBag.DateS;
     DateTime dateE = ViewBag.DateE;
-    DataTable resv = ViewBag.Resv;
+    List<Resv> resv = ViewBag.Resv;
 
     const int BedsPerDay = 4;  // 一天的床位數
 }
@@ -38,18 +37,18 @@
         @for (DateTime d = dateS; d <= dateE; d = d.AddDays(1))
         {
             @* DB 存民國年月日，直接用字串比對，不用轉回 DateTime *@
-            DataRow[] booked = resv.Select($"chRsPDate = '{d.pRyyymmdd()}'");
+            List<Resv> booked = resv.Where(r => r.PDate == d.pRyyymmdd()).ToList();
 
             <tr>
                 @* 加括號隔開，否則 Razor 會把後面的 (...) 當成方法呼叫 *@
                 <th class="bed-date @(d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday ? "bed-weekend" : "")">@(d.ToString("yyyy/MM/dd"))<span class="bed-week">(@d.pToDayOfWeekCh())</span></th>
                 @for (int i = 0; i < BedsPerDay; i++)
                 {
-                    if (i < booked.Length)
+                    if (i < booked.Count)
                     {
                         <td class="bed-slot bed-booked">
-                            <div class="bed-sec">@Sec[booked[i].pCol("chRsPSec")]</div>
-                            <div class="bed-dr">@booked[i]["chRsDrID1Name"]</div>
+                            <div class="bed-sec">@Sec[booked[i].SecNo]</div>
+                            <div class="bed-dr">@booked[i].DrName</div>
                         </td>
                     }
                     else

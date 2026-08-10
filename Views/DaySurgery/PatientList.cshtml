@@ -1,9 +1,8 @@
-@using System.Data
 @using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "查詢病人清單";
     DateTime opDate = ViewBag.OPDate;
-    DataTable patients = ViewBag.Patients;
+    List<Resv> patients = ViewBag.Patients;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -39,7 +38,7 @@
 
 <h2 class="h5 mt-4 mb-2">
     @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh()) 病患清單
-    <span class="text-muted fw-normal">— @patients.Rows.Count 筆</span>
+    <span class="text-muted fw-normal">— @patients.Count 筆</span>
 </h2>
 
 @* 整張表包一個 form，點列＝送出該列的病歷號查檢驗，病歷號走 POST 不進網址 *@
@@ -63,18 +62,18 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (DataRow r in patients.Rows)
+            @foreach (Resv r in patients)
             {
                 <tr style="cursor: pointer;">
                     <td class="text-nowrap">@opDate.ToString("yyyy/MM/dd")</td>
                     @* 姓名做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
                     <td class="text-nowrap">
-                        <button type="submit" name="MrNo" value="@r["chRsMrNo"]" class="btn btn-link p-0 align-baseline">@r["chRsPName"]</button>
+                        <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
                     </td>
-                    <td class="text-nowrap">@r["chRsMrNo"]</td>
-                    <td>@r.pCol("chRsPSex").pMapValue("1", "男", "0", "女")</td>
-                    <td class="text-nowrap">@Sec[r.pCol("chRsPSec")]</td>
-                    <td class="text-nowrap">@r["chRsDrID1Name"]</td>
+                    <td class="text-nowrap">@r.MrNo</td>
+                    <td>@r.Sex.pMapValue("1", "男", "0", "女")</td>
+                    <td class="text-nowrap">@Sec[r.SecNo]</td>
+                    <td class="text-nowrap">@r.DrName</td>
                     <td>—</td>
                     <td class="text-nowrap">—</td>
                     <td class="text-nowrap">—</td>
