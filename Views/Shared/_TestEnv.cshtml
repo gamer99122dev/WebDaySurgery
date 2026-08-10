@@ -1,0 +1,6 @@
+@inject IConfiguration Cfg
+@* 連的不是正式機 DB (172.17.2.31) 就掛紅字，免得把測試資料當正式的看 *@
+@if (!(Cfg.GetConnectionString("HIS") ?? "").Contains("172.17.2.31"))
+{
+    <div class="h1 text-danger">測試環境</div>
+}
