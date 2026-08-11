@@ -34,7 +34,7 @@ namespace WebDaySurgery.Controllers
         }
 
         // 階段一 (2) 查詢病人清單
-        public IActionResult PatientList(DateTime? OPDate, string? Nav)
+        public IActionResult PatientList(DateTime? OPDate, string? Nav, string? ChartNo)
         {
             // 沒帶參數就是首次載入，預設當天
             DateTime opDate = OPDate ?? DateTime.Today;
@@ -48,8 +48,15 @@ namespace WebDaySurgery.Controllers
                 _ => opDate,
             };
 
+            string mrNo = ChartNo.pNullOrTrim();
+
             ViewBag.OPDate = opDate;
-            ViewBag.Patients = QueryResv(opDate, opDate);
+            ViewBag.MrNo = mrNo;
+
+            // 查病歷號不看日期框，一律當天起算三個月內的預約，找的是「這個人接下來要開的刀」
+            ViewBag.Patients = mrNo == ""
+                ? QueryResv(opDate, opDate)
+                : QueryResvByMrNo(mrNo, DateTime.Today, DateTime.Today.AddMonths(3));
 
             return View();
         }
@@ -448,6 +455,38 @@ namespace WebDaySurgery.Controllers
                 STCod = r.pCol("chSTCod"),
                 ItemSeq = r.pCol("chItemSeq"),
                 ItemFlag = r.pCol("itemflag"),
+            }).ToList();
+        }
+
+        /// <summary>
+        /// 查詢指定病歷號、指定日期區間內、指定科別、尚未產生住院號的預約住院資料
+        /// </summary>
+        private List<Resv> QueryResvByMrNo(string MrNo, DateTime DateS, DateTime DateE)
+        {
+            string sMrNo = MrNo.pSQLValidator();
+
+            // DB 存的是民國年月日 (1150730)，不是西元
+            string sDateS = DateS.pRyyymmdd().pSQLValidator();
+            string sDateE = DateE.pRyyymmdd().pSQLValidator();
+
+            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
+            SQL += $"\n FROM DB_ADM..AdmResvTbl ";
+            SQL += $"\n WHERE ";
+            SQL += $"\n chRsMrNo = '{sMrNo}' ";
+            SQL += $"\n AND chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
+            SQL += $"\n AND chRsAdmCaseNo IS NULL";
+            // 這裡的區間橫跨數個月，畫面照日期由近到遠排
+            SQL += $"\n ORDER BY chRsPDate";
+
+            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
+            {
+                PName = r.pCol("chRsPName"),
+                MrNo = r.pCol("chRsMrNo"),
+                Sex = r.pCol("chRsPSex"),
+                SecNo = r.pCol("chRsPSec"),
+                DrName = r.pCol("chRsDrID1Name"),
+                PDate = r.pCol("chRsPDate"),
             }).ToList();
         }
 

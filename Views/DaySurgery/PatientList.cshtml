@@ -2,7 +2,12 @@
 @{
     ViewData["Title"] = "查詢病人清單";
     DateTime opDate = ViewBag.OPDate;
+    string mrNo = ViewBag.MrNo;
     List<Resv> patients = ViewBag.Patients;
+
+    string listTitle = mrNo == ""
+        ? $"{opDate:yyyy/MM/dd} ({opDate.pToDayOfWeekCh()}) 病患清單"
+        : $"病歷號 {mrNo}　{DateTime.Today:yyyy/MM/dd} 起三個月內的預約";
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -30,7 +35,7 @@
         <label for="ChartNo" class="form-label">病歷號</label>
         <div class="d-flex gap-2">
             <input type="text" id="ChartNo" name="ChartNo" class="form-control" style="width: 9rem;"
-                   inputmode="numeric" autocomplete="off" maxlength="10" />
+                   inputmode="numeric" autocomplete="off" maxlength="10" value="@mrNo" />
             <button type="submit" class="btn btn-primary text-nowrap">查病歷號</button>
         </div>
     </form>
@@ -38,16 +43,12 @@
 </div>
 
 <h2 class="h5 mt-4 mb-2">
-    @opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh()) 病患清單
+    @listTitle
     <span class="text-muted fw-normal">— @patients.Count 筆</span>
 </h2>
 
-@* 整張表包一個 form，點列＝送出該列的病歷號查檢驗，病歷號走 POST 不進網址 *@
-<form method="post" asp-action="LabResult" id="labForm">
-<input type="hidden" name="OPDate" value="@opDate.ToString("yyyy-MM-dd")" />
-
 <div class="table-responsive">
-    <table class="table table-bordered table-hover align-middle">
+    <table class="table table-bordered table-hover align-middle" id="patientTable">
         <thead class="table-light">
             <tr class="text-nowrap">
                 <th>預定住院手術日期</th>
@@ -65,11 +66,17 @@
         <tbody>
             @foreach (Resv r in patients)
             {
+                DateTime pDate = r.PDate.pToDateTime();
+
                 <tr style="cursor: pointer;">
-                    <td class="text-nowrap">@opDate.ToString("yyyy/MM/dd")</td>
+                    <td class="text-nowrap">@pDate.ToString("yyyy/MM/dd")</td>
                     @* 姓名做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
+                    @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
                     <td class="text-nowrap">
-                        <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
+                        <form method="post" asp-action="LabResult">
+                            <input type="hidden" name="OPDate" value="@pDate.ToString("yyyy-MM-dd")" />
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
+                        </form>
                     </td>
                     <td class="text-nowrap">@r.MrNo</td>
                     <td>@r.Sex.pMapValue("1", "男", "0", "女")</td>
@@ -84,12 +91,11 @@
         </tbody>
     </table>
 </div>
-</form>
 
 @section Scripts {
 <script>
     // 點整列＝點該列姓名那顆按鈕。姓名本身有 button，點它會重複觸發，所以跳過
-    document.querySelectorAll('#labForm tbody tr').forEach(tr => tr.addEventListener('click', e => {
+    document.querySelectorAll('#patientTable tbody tr').forEach(tr => tr.addEventListener('click', e => {
         if (!e.target.closest('button')) tr.querySelector('button[name="MrNo"]').click();
     }));
 </script>
