@@ -28,10 +28,6 @@
     };
 }
 
-@* 清單是 GET，日期帶在網址上，直接連回去就好 *@
-<a asp-action="PatientList" asp-route-ResvDate="@resvDate.ToString("yyyy-MM-dd")"
-   class="btn btn-outline-secondary mb-3">‹ 返回病患清單</a>
-
 <h1>@ViewData["Title"]</h1>
 <partial name="_TestEnv" />
 
