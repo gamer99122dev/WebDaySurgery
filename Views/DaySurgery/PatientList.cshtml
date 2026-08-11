@@ -55,6 +55,7 @@
                 <th>病人姓名</th>
                 <th>病歷號</th>
                 <th>性別</th>
+                <th>連絡電話</th>
                 <th>科別</th>
                 <th>醫師</th>
                 <th>手術排程</th>
@@ -80,6 +81,13 @@
                     </td>
                     <td class="text-nowrap">@r.MrNo</td>
                     <td>@r.Sex.pMapValue("1", "男", "0", "女")</td>
+                    @* 兩支電話各佔一行，只有一支就不會多出空行 *@
+                    <td class="text-nowrap">
+                        @foreach (string tel in new[] { r.TelH, r.TelO }.Where(t => t != ""))
+                        {
+                            <div>@tel</div>
+                        }
+                    </td>
                     <td class="text-nowrap">@Sec[r.SecNo]</td>
                     <td class="text-nowrap">@r.DrName</td>
                     <td>—</td>

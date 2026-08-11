@@ -514,7 +514,7 @@ namespace WebDaySurgery.Controllers
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
             string sDateE = DateE.pRyyymmdd().pSQLValidator();
 
-            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
+            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsPTelH, chRsPTelO, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
             SQL += $"\n FROM DB_ADM..AdmResvTbl ";
             SQL += $"\n WHERE ";
             SQL += $"\n chRsMrNo = '{sMrNo}' ";
@@ -529,6 +529,8 @@ namespace WebDaySurgery.Controllers
                 PName = r.pCol("chRsPName").pReplaceEUDC(),
                 MrNo = r.pCol("chRsMrNo"),
                 Sex = r.pCol("chRsPSex"),
+                TelH = r.pCol("chRsPTelH"),
+                TelO = r.pCol("chRsPTelO"),
                 SecNo = r.pCol("chRsPSec"),
                 DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
                 PDate = r.pCol("chRsPDate"),
@@ -544,7 +546,7 @@ namespace WebDaySurgery.Controllers
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
             string sDateE = DateE.pRyyymmdd().pSQLValidator();
 
-            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
+            string SQL = "SELECT chRsPName, chRsMrNo, chRsPSex, chRsPTelH, chRsPTelO, chRsReason, chRsPSec, chRsDrID1, chRsDrID1Name, chRsAdmCaseNo, chRsPDate ";
             SQL += $"\n FROM DB_ADM..AdmResvTbl ";
             SQL += $"\n WHERE ";
             SQL += $"\n chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
@@ -557,6 +559,8 @@ namespace WebDaySurgery.Controllers
                 PName = r.pCol("chRsPName").pReplaceEUDC(),
                 MrNo = r.pCol("chRsMrNo"),
                 Sex = r.pCol("chRsPSex"),
+                TelH = r.pCol("chRsPTelH"),
+                TelO = r.pCol("chRsPTelO"),
                 SecNo = r.pCol("chRsPSec"),
                 DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
                 PDate = r.pCol("chRsPDate"),
