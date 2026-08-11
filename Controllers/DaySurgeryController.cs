@@ -481,11 +481,11 @@ namespace WebDaySurgery.Controllers
 
             return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
             {
-                PName = r.pCol("chRsPName"),
+                PName = r.pCol("chRsPName").pReplaceEUDC(),
                 MrNo = r.pCol("chRsMrNo"),
                 Sex = r.pCol("chRsPSex"),
                 SecNo = r.pCol("chRsPSec"),
-                DrName = r.pCol("chRsDrID1Name"),
+                DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
                 PDate = r.pCol("chRsPDate"),
             }).ToList();
         }
@@ -509,11 +509,11 @@ namespace WebDaySurgery.Controllers
             // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
             return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
             {
-                PName = r.pCol("chRsPName"),
+                PName = r.pCol("chRsPName").pReplaceEUDC(),
                 MrNo = r.pCol("chRsMrNo"),
                 Sex = r.pCol("chRsPSex"),
                 SecNo = r.pCol("chRsPSec"),
-                DrName = r.pCol("chRsDrID1Name"),
+                DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
                 PDate = r.pCol("chRsPDate"),
             }).ToList();
         }
