@@ -28,11 +28,9 @@
     };
 }
 
-@* 清單是 POST 查詢、日期不在網址，用瀏覽器上一頁會跳「確認重新送出表單」，所以自己送一張回去 *@
-<form method="post" asp-action="PatientList" class="mb-3">
-    <input type="hidden" name="OPDate" value="@opDate.ToString("yyyy-MM-dd")" />
-    <button type="submit" class="btn btn-outline-secondary">‹ 返回病患清單</button>
-</form>
+@* 清單是 GET，日期帶在網址上，直接連回去就好 *@
+<a asp-action="PatientList" asp-route-OPDate="@opDate.ToString("yyyy-MM-dd")"
+   class="btn btn-outline-secondary mb-3">‹ 返回病患清單</a>
 
 <h1>@ViewData["Title"]</h1>
 <partial name="_TestEnv" />

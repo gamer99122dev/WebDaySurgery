@@ -17,7 +17,7 @@
 <div class="d-flex flex-wrap align-items-end gap-4">
 
     @* 主動線：看某一天的手術名單。改日期就直接查，不用再按一次按鈕 *@
-    <form method="post">
+    <form method="post" asp-action="PatientListSearch">
         <label for="OPDate" class="form-label">手術日期 (西元)</label>
         <div class="d-flex gap-2">
             <input type="date" id="OPDate" name="OPDate" class="form-control" style="width: 10rem;"
@@ -31,7 +31,7 @@
     </form>
 
     @* 例外查詢：直接找特定某個人 *@
-    <form method="post">
+    <form method="post" asp-action="PatientListSearch">
         <label for="ChartNo" class="form-label">病歷號</label>
         <div class="d-flex gap-2">
             <input type="text" id="ChartNo" name="ChartNo" class="form-control" style="width: 9rem;"
@@ -73,7 +73,7 @@
                     @* 姓名做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
                     @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
                     <td class="text-nowrap">
-                        <form method="post" asp-action="LabResult">
+                        <form method="post" asp-action="LabResultSearch">
                             <input type="hidden" name="OPDate" value="@pDate.ToString("yyyy-MM-dd")" />
                             <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
                         </form>
