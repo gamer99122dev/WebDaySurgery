@@ -11,7 +11,8 @@
 <h1>@ViewData["Title"]</h1>
 <partial name="_TestEnv" />
 
-<form method="post" id="queryForm">
+@* 查詢條件只有日期，不敏感，直接用 GET 讓它進網址；沒有 POST 就沒有重送表單的問題 *@
+<form method="get" id="queryForm">
     <div class="row g-2 align-items-end" style="max-width: 32rem;">
         <div class="col-auto">
             <label for="DateS" class="form-label">起</label>

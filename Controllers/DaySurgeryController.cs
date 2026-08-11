@@ -16,9 +16,9 @@ namespace WebDaySurgery.Controllers
         public DaySurgeryController(WebToolNet.DBConn.DBConn db) => _db = db;
 
         // 階段一 (1) 預定床位
-        // 首次載入是 GET，查詢是 POST，日期不進網址
-        // Auto 版才會跳過 GET，只驗 POST；ValidateAntiForgeryToken 連 GET 也驗會變 400
-        [AutoValidateAntiforgeryToken]
+        // 查詢條件只有日期，不敏感，查詢就用 GET 帶在網址上，
+        // 沒有 POST 就不用 PRG，上一頁／重新整理／加書籤都正常
+        [HttpGet]
         public IActionResult BedBooking(DateTime? DateS, DateTime? DateE)
         {
             // 沒帶參數就是首次載入，預設當天起算三天
