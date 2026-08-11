@@ -41,18 +41,18 @@ namespace WebDaySurgery.Controllers
         // 查完只存條件、轉 GET (PRG)，畫面永遠是 GET 畫出來的，
         // 這樣瀏覽器上一頁／重新整理才不會跳「確認重新送出表單」
         [HttpPost]
-        public IActionResult PatientListSearch(DateTime? OPDate, string? Nav, string? ChartNo)
+        public IActionResult PatientListSearch(DateTime? ResvDate, string? Nav, string? ChartNo)
         {
             // 沒帶參數就是首次載入，預設當天
-            DateTime opDate = OPDate ?? DateTime.Today;
+            DateTime resvDate = ResvDate ?? DateTime.Today;
 
             // 前一日／今日／後一日，日期算在後端，前端不用 JS 也不會踩到 UTC 倒退一天
-            opDate = Nav switch
+            resvDate = Nav switch
             {
-                "prev" => opDate.AddDays(-1),
-                "next" => opDate.AddDays(1),
+                "prev" => resvDate.AddDays(-1),
+                "next" => resvDate.AddDays(1),
                 "today" => DateTime.Today,
-                _ => opDate,
+                _ => resvDate,
             };
 
             // 查日期那張 form 不帶病歷號，等於使用者要看整天的清單，把上一次查的病歷號清掉
@@ -67,25 +67,25 @@ namespace WebDaySurgery.Controllers
             }
 
             // 日期不算敏感資料，帶在網址上，上一頁／下一頁才回得到原本那天
-            return RedirectToAction(nameof(PatientList), new { OPDate = opDate.ToString("yyyy-MM-dd") });
+            return RedirectToAction(nameof(PatientList), new { ResvDate = resvDate.ToString("yyyy-MM-dd") });
         }
 
         // 階段一 (2) 查詢病人清單 (畫面)
         [HttpGet]
-        public IActionResult PatientList(DateTime? OPDate)
+        public IActionResult PatientList(DateTime? ResvDate)
         {
             // 沒帶參數就是首次載入，預設當天
-            DateTime opDate = OPDate ?? DateTime.Today;
+            DateTime resvDate = ResvDate ?? DateTime.Today;
 
             // Peek 不會把值消掉，從檢驗資料頁回來、或重新整理，都還停在同一個查詢結果
             string mrNo = TempData.Peek(TempChartNo) as string ?? "";
 
-            ViewBag.OPDate = opDate;
+            ViewBag.ResvDate = resvDate;
             ViewBag.MrNo = mrNo;
 
             // 查病歷號不看日期框，一律當天起算三個月內的預約，找的是「這個人接下來要開的刀」
             ViewBag.Patients = mrNo == ""
-                ? QueryResv(opDate, opDate)
+                ? QueryResv(resvDate, resvDate)
                 : QueryResvByMrNo(mrNo, DateTime.Today, DateTime.Today.AddMonths(3));
 
             return View();
@@ -94,37 +94,37 @@ namespace WebDaySurgery.Controllers
         // 階段一 (3) 病患檢驗資料 (選人)
         // 病歷號走 POST body，不進網址，避免被改參數撈到別人的資料
         [HttpPost]
-        public IActionResult LabResultSearch(string MrNo, DateTime OPDate)
+        public IActionResult LabResultSearch(string MrNo, DateTime ResvDate)
         {
             TempData[TempMrNo] = MrNo.pNullOrTrim();
 
-            return RedirectToAction(nameof(LabResult), new { OPDate = OPDate.ToString("yyyy-MM-dd") });
+            return RedirectToAction(nameof(LabResult), new { ResvDate = ResvDate.ToString("yyyy-MM-dd") });
         }
 
         // 階段一 (3) 病患檢驗資料 (畫面)
         [HttpGet]
-        public IActionResult LabResult(DateTime? OPDate)
+        public IActionResult LabResult(DateTime? ResvDate)
         {
             // Peek 不會把值消掉，重新整理還是同一個病人
             string mrNo = TempData.Peek(TempMrNo) as string ?? "";
 
             // 直接打網址進來、或 TempData 過期了，就沒有病人可顯示，退回清單
-            if (OPDate == null || mrNo == "") return RedirectToAction(nameof(PatientList));
+            if (ResvDate == null || mrNo == "") return RedirectToAction(nameof(PatientList));
 
             // 清單本來就查過這一天，直接從同一份結果撈這個人，不用為了表頭再查一次
-            Resv? patient = QueryResv(OPDate.Value, OPDate.Value).FirstOrDefault(p => p.MrNo == mrNo);
+            Resv? patient = QueryResv(ResvDate.Value, ResvDate.Value).FirstOrDefault(p => p.MrNo == mrNo);
 
             // 查不到多半是清單開著、資料被別人改掉了，退回清單重查
             if (patient == null) return RedirectToAction(nameof(PatientList));
 
-            ViewBag.OPDate = OPDate.Value;
+            ViewBag.ResvDate = ResvDate.Value;
             ViewBag.Patient = patient;
 
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex) = QueryPatientBasic(mrNo);
 
             // 術前檢驗抓手術日往前三個月，更早的多半不是這次手術要看的
-            List<Lab> labs = QueryLab(mrNo, OPDate.Value.AddMonths(-3), OPDate.Value);
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-3), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 

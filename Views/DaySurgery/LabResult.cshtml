@@ -1,7 +1,7 @@
 @using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "檢驗資料";
-    DateTime opDate = ViewBag.OPDate;
+    DateTime resvDate = ViewBag.ResvDate;
     Resv patient = ViewBag.Patient;
     List<Lab> labs = ViewBag.Labs;
 
@@ -29,7 +29,7 @@
 }
 
 @* 清單是 GET，日期帶在網址上，直接連回去就好 *@
-<a asp-action="PatientList" asp-route-OPDate="@opDate.ToString("yyyy-MM-dd")"
+<a asp-action="PatientList" asp-route-ResvDate="@resvDate.ToString("yyyy-MM-dd")"
    class="btn btn-outline-secondary mb-3">‹ 返回病患清單</a>
 
 <h1>@ViewData["Title"]</h1>
@@ -53,7 +53,7 @@
         </div>
         <div>
             <div class="small text-muted">手術日期</div>
-            <div class="text-nowrap">@opDate.ToString("yyyy/MM/dd") (@opDate.pToDayOfWeekCh())</div>
+            <div class="text-nowrap">@resvDate.ToString("yyyy/MM/dd") (@resvDate.pToDayOfWeekCh())</div>
         </div>
     </div>
 </div>

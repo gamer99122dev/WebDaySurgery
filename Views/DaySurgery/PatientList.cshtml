@@ -1,12 +1,12 @@
 @using WebToolNet.UtilExtension
 @{
     ViewData["Title"] = "查詢病人清單";
-    DateTime opDate = ViewBag.OPDate;
+    DateTime resvDate = ViewBag.ResvDate;
     string mrNo = ViewBag.MrNo;
     List<Resv> patients = ViewBag.Patients;
 
     string listTitle = mrNo == ""
-        ? $"{opDate:yyyy/MM/dd} ({opDate.pToDayOfWeekCh()}) 病患清單"
+        ? $"{resvDate:yyyy/MM/dd} ({resvDate.pToDayOfWeekCh()}) 病患清單"
         : $"病歷號 {mrNo}　{DateTime.Today:yyyy/MM/dd} 起三個月內的預約";
 }
 
@@ -18,10 +18,10 @@
 
     @* 主動線：看某一天的手術名單。改日期就直接查，不用再按一次按鈕 *@
     <form method="post" asp-action="PatientListSearch">
-        <label for="OPDate" class="form-label">手術日期 (西元)</label>
+        <label for="ResvDate" class="form-label">手術日期 (西元)</label>
         <div class="d-flex gap-2">
-            <input type="date" id="OPDate" name="OPDate" class="form-control" style="width: 10rem;"
-                   value="@opDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+            <input type="date" id="ResvDate" name="ResvDate" class="form-control" style="width: 10rem;"
+                   value="@resvDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
             <div class="btn-group">
                 <button type="submit" name="Nav" value="prev" class="btn btn-outline-secondary">‹ 前一日</button>
                 <button type="submit" name="Nav" value="today" class="btn btn-outline-secondary">今日</button>
@@ -74,7 +74,7 @@
                     @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
                     <td class="text-nowrap">
                         <form method="post" asp-action="LabResultSearch">
-                            <input type="hidden" name="OPDate" value="@pDate.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
                             <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
                         </form>
                     </td>
