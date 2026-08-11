@@ -38,6 +38,9 @@
     <tbody>
         @for (DateTime d = dateS; d <= dateE; d = d.AddDays(1))
         {
+            @* 白日手術只排週一到週五，週末不畫出來 *@
+            if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) { continue; }
+
             @* DB 存民國年月日，直接用字串比對，不用轉回 DateTime *@
             List<Resv> booked = resv.Where(r => r.PDate == d.pRyyymmdd()).ToList();
 
