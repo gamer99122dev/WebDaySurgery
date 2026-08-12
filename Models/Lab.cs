@@ -18,6 +18,7 @@ namespace WebDaySurgery.Models
         public string RcpDTM { get; init; } = "";     // chRcpDTM   收件時間 (民國11碼)
         public string VfDTM { get; init; } = "";      // chVfDTM    報告確認時間
         public string ModDTM { get; init; } = "";     // chModDTM2  修改時間，沒改過是空字串
+        public string TeamNo { get; init; } = "";     // chTeamNo   類別代碼 (C 生化、H 血液、J 血糖檢查…)
         public string TeamNam { get; init; } = "";    // chTeamNam  類別名稱
         public string TeamSeq { get; init; } = "";    // chTeamSeq  類別排序
         public string STCod { get; init; } = "";      // chSTCod    外送代碼，有值代表外送不判讀

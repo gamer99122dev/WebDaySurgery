@@ -495,6 +495,7 @@ namespace WebDaySurgery.Controllers
                 RcpDTM = r.pCol("chRcpDTM"),
                 VfDTM = r.pCol("chVfDTM"),
                 ModDTM = r.pCol("chModDTM2"),
+                TeamNo = r.pCol("chTeamNo"),
                 TeamNam = r.pCol("chTeamNam"),
                 TeamSeq = r.pCol("chTeamSeq"),
                 STCod = r.pCol("chSTCod"),
