@@ -123,8 +123,8 @@ namespace WebDaySurgery.Controllers
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex) = QueryPatientBasic(mrNo);
 
-            // 術前檢驗抓手術日往前三個月，更早的多半不是這次手術要看的
-            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-3), ResvDate.Value);
+            // 術前檢驗抓手術日往前 14 天，更早的多半不是這次手術要看的
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-14), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -524,16 +524,56 @@ namespace WebDaySurgery.Controllers
             // 這裡的區間橫跨數個月，畫面照日期由近到遠排
             SQL += $"\n ORDER BY chRsPDate";
 
-            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
+
+            DataTable dt = _db.executesqldt(SQL);
+
+            // 這個人這段期間沒預約就不用再查排程了
+            if (dt.Rows.Count == 0) return new List<Resv>();
+
+            //手術排程、術式
+            SQL = "\n select ";
+            SQL += "\n b.OROrdName1 as '術式一', ORSchDate, ORSchTime, a.chRsMrNo, a.chRsPName, a.chRsPDate ";
+            SQL += "\n from DB_ADM..AdmResvTbl a ";
+            SQL += "\n join DB_MIDDLE..JAG_OR_opsche_chr_basic b ";
+            SQL += "\n on ";
+            SQL += "\n a.chRsPDate2 = b.RegDate and a.chRsPTime = b.RegTime and a.chRsPRoom = b.RegRoom and a.chRsPNo = b.RegNo";
+            SQL += "\n where ";
+            SQL += $"\n a.chRsMrNo = '{sMrNo}' ";
+            SQL += $"\n and a.chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            SQL += "\n and isnull(b.OROrdName1,'' ) <> '' ";
+
+            DataTable dtJAG = _db.executesqldt(SQL);
+
+            // 這裡的區間橫跨三個月，同一個人本來就會有好幾天的預約，
+            // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
+            Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
+
+            // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
+            foreach (DataRow i in dtJAG.AsEnumerable())
             {
-                PName = r.pCol("chRsPName").pReplaceEUDC(),
-                MrNo = r.pCol("chRsMrNo"),
-                Sex = r.pCol("chRsPSex"),
-                TelH = r.pCol("chRsPTelH"),
-                TelO = r.pCol("chRsPTelO"),
-                SecNo = r.pCol("chRsPSec"),
-                DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
-                PDate = r.pCol("chRsPDate"),
+                schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
+            }
+
+            return dt.AsEnumerable().Select(r =>
+            {
+                // 沒排刀的預約一樣要留在清單上，只是這兩欄空著
+                schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
+
+                return new Resv
+                {
+                    PName = r.pCol("chRsPName").pReplaceEUDC(),
+                    MrNo = r.pCol("chRsMrNo"),
+                    Sex = r.pCol("chRsPSex"),
+                    TelH = r.pCol("chRsPTelH"),
+                    TelO = r.pCol("chRsPTelO"),
+                    SecNo = r.pCol("chRsPSec"),
+                    DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
+                    PDate = r.pCol("chRsPDate"),
+
+                    // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
+                    OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
+                    OpName = sch?.pCol("術式一") ?? "",
+                };
             }).ToList();
         }
 
@@ -553,17 +593,65 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
             SQL += $"\n AND chRsAdmCaseNo IS NULL";
 
-            // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
-            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Resv
+
+            DataTable dt = _db.executesqldt(SQL);
+
+            List<string> MrList = new List<string>();
+
+            foreach (var i in dt.AsEnumerable())
             {
-                PName = r.pCol("chRsPName").pReplaceEUDC(),
-                MrNo = r.pCol("chRsMrNo"),
-                Sex = r.pCol("chRsPSex"),
-                TelH = r.pCol("chRsPTelH"),
-                TelO = r.pCol("chRsPTelO"),
-                SecNo = r.pCol("chRsPSec"),
-                DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
-                PDate = r.pCol("chRsPDate"),
+                MrList.Add(i.pCol("chRsMrNo"));
+            }
+
+            // 這天沒人就不用查排程了，而且 in () 是語法錯誤
+            if (MrList.Count == 0) return new List<Resv>();
+
+            //手術排程、術式
+            SQL = "\n select ";
+            SQL += "\n b.OROrdName1 as '術式一', ORSchDate, ORSchTime, a.chRsMrNo, a.chRsPName, a.chRsPDate ";
+            SQL += "\n from DB_ADM..AdmResvTbl a ";
+            SQL += "\n join DB_MIDDLE..JAG_OR_opsche_chr_basic b ";
+            SQL += "\n on ";
+            SQL += "\n a.chRsPDate2 = b.RegDate and a.chRsPTime = b.RegTime and a.chRsPRoom = b.RegRoom and a.chRsPNo = b.RegNo";
+            SQL += "\n where ";
+            SQL += $"\n a.chRsMrNo in  ({MrList.pJoinWithQuote()}) ";
+            SQL += $"\n and a.chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            SQL += "\n and isnull(b.OROrdName1,'' ) <> '' ";
+            SQL += "\n ";
+            SQL += "\n ";
+            DataTable dtJAG = _db.executesqldt(SQL);
+
+            // BedBooking 一次查三天，同一個病歷號可能有好幾天的預約，
+            // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
+            Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
+
+            // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
+            foreach (DataRow i in dtJAG.AsEnumerable())
+            {
+                schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
+            }
+
+            // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
+            return dt.AsEnumerable().Select(r =>
+            {
+                // 沒排刀的病人一樣要留在清單上，只是這兩欄空著
+                schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
+
+                return new Resv
+                {
+                    PName = r.pCol("chRsPName").pReplaceEUDC(),
+                    MrNo = r.pCol("chRsMrNo"),
+                    Sex = r.pCol("chRsPSex"),
+                    TelH = r.pCol("chRsPTelH"),
+                    TelO = r.pCol("chRsPTelO"),
+                    SecNo = r.pCol("chRsPSec"),
+                    DrName = r.pCol("chRsDrID1Name").pReplaceEUDC(),
+                    PDate = r.pCol("chRsPDate"),
+
+                    // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
+                    OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
+                    OpName = sch?.pCol("術式一") ?? "",
+                };
             }).ToList();
         }
     }

@@ -90,8 +90,9 @@
                     </td>
                     <td class="text-nowrap">@Sec[r.SecNo]</td>
                     <td class="text-nowrap">@r.DrName</td>
-                    <td>—</td>
-                    <td class="text-nowrap">—</td>
+                    <td class="text-nowrap">@(r.OpSch == "" ? "—" : r.OpSch)</td>
+                    @* 術式名稱動輒上百字，這欄不能 nowrap，會把整張表撐開 *@
+                    <td>@(r.OpName == "" ? "—" : r.OpName)</td>
                     <td class="text-nowrap">—</td>
                     <td class="text-nowrap">—</td>
                 </tr>

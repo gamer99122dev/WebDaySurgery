@@ -13,5 +13,9 @@ namespace WebDaySurgery.Models
         public string SecNo { get; init; } = "";    // chRsPSec       科別代碼
         public string DrName { get; init; } = "";   // chRsDrID1Name  主治醫師
         public string PDate { get; init; } = "";    // chRsPDate      預定住院日 (民國7碼)
+
+        // 以下來自手術排程 (DB_MIDDLE..JAG_OR_opsche_chr_basic)，沒排到刀就是空字串
+        public string OpSch { get; init; } = "";    // ORSchDate + ORSchTime  手術排程
+        public string OpName { get; init; } = "";   // OROrdName1             術式
     }
 }
