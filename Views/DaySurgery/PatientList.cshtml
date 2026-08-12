@@ -93,8 +93,33 @@
                     <td class="text-nowrap">@(r.OpSch == "" ? "—" : r.OpSch)</td>
                     @* 術式名稱動輒上百字，這欄不能 nowrap，會把整張表撐開 *@
                     <td>@(r.OpName == "" ? "—" : r.OpName)</td>
-                    <td class="text-nowrap">—</td>
-                    <td class="text-nowrap">—</td>
+                    @* 一項一行。符號本身就分得出來，不是只靠顏色 *@
+                    <td class="text-nowrap">
+                        @if (r.Labs.Count == 0)
+                        {
+                            @: —
+                        }
+                        @foreach (ChkItem c in r.Labs)
+                        {
+                            <div>
+                                @c.Nam
+                                <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
+                            </div>
+                        }
+                    </td>
+                    <td class="text-nowrap">
+                        @if (r.Exams.Count == 0)
+                        {
+                            @: —
+                        }
+                        @foreach (ChkItem c in r.Exams)
+                        {
+                            <div>
+                                @c.Nam
+                                <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
+                            </div>
+                        }
+                    </td>
                 </tr>
             }
         </tbody>

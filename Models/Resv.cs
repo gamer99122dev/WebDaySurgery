@@ -17,5 +17,18 @@ namespace WebDaySurgery.Models
         // 以下來自手術排程 (DB_MIDDLE..JAG_OR_opsche_chr_basic)，沒排到刀就是空字串
         public string OpSch { get; init; } = "";    // ORSchDate + ORSchTime  手術排程
         public string OpName { get; init; } = "";   // OROrdName1             術式
+
+        // 以下來自檢驗 (DB_ADM..AdmResultRPTbl)，術前該看的幾類檢驗各自開齊了沒
+        public List<ChkItem> Labs { get; init; } = new List<ChkItem>();
+
+        // 以下來自檢查 (DB_OPD..OpdOrdTbl)，CXR／KUB／EKG 各自開了沒
+        public List<ChkItem> Exams { get; init; } = new List<ChkItem>();
     }
+
+    /// <summary>
+    /// 清單上一項檢驗類別 (生化／血液／血糖檢查) 或一項檢查 (CXR／KUB／EKG) 的開立狀況
+    /// </summary>
+    /// <param name="Nam">顯示名稱</param>
+    /// <param name="Flag">V 全開、! 缺項、X 全沒開；檢查只有一個條件，不會是 !</param>
+    public record ChkItem(string Nam, string Flag);
 }

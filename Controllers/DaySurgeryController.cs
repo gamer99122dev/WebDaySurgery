@@ -1,11 +1,12 @@
+using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc;
 using WebDaySurgery.Models;
 using WebToolNet.HIS2BusinessRule;
 using WebToolNet.myDateTime;
 using WebToolNet.UtilExtension;
 using WebToolNet.UtilExtension.myDateTime;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WebDaySurgery.Controllers
 {
@@ -123,8 +124,8 @@ namespace WebDaySurgery.Controllers
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex) = QueryPatientBasic(mrNo);
 
-            // 術前檢驗抓手術日往前 14 天，更早的多半不是這次手術要看的
-            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-14), ResvDate.Value);
+            // 術前檢驗原本抓手術日往前 14 天，暫時放寬成三個月方便看資料，之後要改回來
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-3), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -555,6 +556,35 @@ namespace WebDaySurgery.Controllers
                 schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
             }
 
+            //檢驗
+            // 這支查的是「今天起三個月內的預約」，往後的日子還不會有檢驗，
+            // 起日要從 DateS 再往前推才抓得到，不能照 QueryResv 用 DateE 往前推
+            string LwDateS = sDateS.pToDateTime().AddMonths(-3).pRyyymmdd();
+            string LwDateE = sDateE;//TODO:暫定往前3個月，後續要改成14天
+
+            // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
+            // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
+            SQL = $"\n select B.chMRNo, A.chTeamNo, RTrim(B.chHead) as chHead ";
+            SQL += $"\n FROM DB_ADM..AdmRqtrcpLWTbl A  ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmResultRPTbl B         ";
+            SQL += $"\n      ON A.chGReqNo = B.chGReqNo AND A.chReqNo = B.chReqNo ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmLabSendToTbl E ON A.chSTCod = E.chSTCod   ";
+            SQL += $"\n    , DB_ADM..AdmLabTeamTbl C       ";
+            SQL += $"\n WHERE A.chTeamNo = C.chTeamNo ";
+            SQL += $"\n   AND B.chMRNo = '{sMrNo}' ";
+            SQL += $"\n   AND B.chStat IN ('10','20','30','60','70') ";
+            // chRcpDTM 是民國年月日時分 11 碼 (11501010000)，7 碼日期要補上時分才比得對，
+            // 不然 '11508122359' > '1150812'，當天的報告會被 BETWEEN 濾掉
+            SQL += $"\n   AND B.chRcpDTM BETWEEN '{LwDateS}0000' AND '{LwDateE}2359' ";
+            // 畫面只看這幾類，其他類別不用撈回來
+            SQL += $"\n   AND A.chTeamNo IN ({LabChkTeams.Select(t => t.TeamNo).ToList().pJoinWithQuote()}) ";
+
+            DataTable dtLw = _db.executesqldt(SQL);
+
+            // 只有一個人，但旗標怎麼算跟清單同一套。
+            // 這個人在區間內有好幾筆預約的話，每一列的檢驗欄會長一樣，檢驗只查了一個區間
+            Dictionary<string, List<ChkItem>> labChks = BuildLabChk(dtLw, dt.AsEnumerable().Select(i => i.pCol("chRsMrNo")).ToList());
+
             return dt.AsEnumerable().Select(r =>
             {
                 // 沒排刀的預約一樣要留在清單上，只是這兩欄空著
@@ -574,6 +604,9 @@ namespace WebDaySurgery.Controllers
                     // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
                     OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
                     OpName = sch?.pCol("術式一") ?? "",
+
+                    // 查的就是這個人，一定找得到
+                    Labs = labChks[r.pCol("chRsMrNo")],
                 };
             }).ToList();
         }
@@ -632,6 +665,50 @@ namespace WebDaySurgery.Controllers
                 schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
             }
 
+            //檢驗
+            string LwDateS = sDateE.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
+            string LwDateE = sDateE;
+
+            // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
+            // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
+            SQL = $"\n select B.chMRNo, A.chTeamNo, RTrim(B.chHead) as chHead ";
+            SQL += $"\n FROM DB_ADM..AdmRqtrcpLWTbl A  ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmResultRPTbl B         ";
+            SQL += $"\n      ON A.chGReqNo = B.chGReqNo AND A.chReqNo = B.chReqNo ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmLabSendToTbl E ON A.chSTCod = E.chSTCod   ";
+            SQL += $"\n    , DB_ADM..AdmLabTeamTbl C       ";
+            SQL += $"\n WHERE A.chTeamNo = C.chTeamNo ";
+            SQL += $"\n   AND B.chMRNo IN ({MrList.pJoinWithQuote()}) ";
+            SQL += $"\n   AND B.chStat IN ('10','20','30','60','70') ";
+            // chRcpDTM 是民國年月日時分 11 碼 (11501010000)，7 碼日期要補上時分才比得對，
+            // 不然 '11508122359' > '1150812'，當天的報告會被 BETWEEN 濾掉
+            SQL += $"\n   AND B.chRcpDTM BETWEEN '{LwDateS}0000' AND '{LwDateE}2359' ";
+            // 畫面只看這幾類，其他類別不用撈回來
+            SQL += $"\n   AND A.chTeamNo IN ({LabChkTeams.Select(t => t.TeamNo).ToList().pJoinWithQuote()}) ";
+
+            DataTable dtLw = _db.executesqldt(SQL);
+
+            Dictionary<string, List<ChkItem>> labChks = BuildLabChk(dtLw, MrList);
+
+
+            //檢查
+            string XDateS = sDateE.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
+            string XwDateE = sDateE;
+            // 病歷號要一起撈回來，等一下靠它把醫令分給每一列
+            SQL = $"\n select B.chOp0PMrNo, chOp1Date, chOp1Time, chOp1Room, intOp1No, chOp4OrdName, chOp4OrdNo, chOp4OrdHis ";
+            SQL += $"\n From DB_OPD..OpdOrdTbl A  ";
+            SQL += $"\n Join DB_OPD..OpdRegPtnTbl B  ";
+            SQL += $"\n On A.chOp1Date=B.chOp0Date And A.chOp1Time=B.chOp0Time And A.chOp1Room=B.chOp0Room And A.intOp1No=B.intOp0No   ";
+            SQL += $"\n where ";
+            SQL += $"\n chOp1Date between '{XDateS}' and '{XwDateE}' ";
+            SQL += $"\n and B.chOp0PMrNo in ({MrList.pJoinWithQuote()}) ";
+            // 畫面只看這三項，其他醫令不用撈回來；這裡跟下面判定用的是同一份設定
+            SQL += $"\n and ( {ExamChks.Select(e => $"A.{e.Col} in ({e.Codes.ToList().pJoinWithQuote()})").ToList().pJoin(" or ")} ) ";
+
+            DataTable dtX = _db.executesqldt(SQL);
+
+            Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtX, MrList);
+
             // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
             return dt.AsEnumerable().Select(r =>
             {
@@ -652,8 +729,85 @@ namespace WebDaySurgery.Controllers
                     // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
                     OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
                     OpName = sch?.pCol("術式一") ?? "",
+
+                    // MrList 就是從這批資料撈出來的，一定找得到
+                    Labs = labChks[r.pCol("chRsMrNo")],
+                    Exams = examChks[r.pCol("chRsMrNo")],
                 };
             }).ToList();
+        }
+
+        // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
+        // 要多看一類、或某一類要增減項目，改這裡就好
+        private static readonly (string TeamNo, string TeamNam, string[] Heads)[] LabChkTeams =
+        {
+            ("C", "生化", new[] { "BUN", "CREA", "Na", "K", "AST", "ALT" }),
+
+            ("H", "血液", new[] { "WBC", "RBC", "Hb", "Hct", "MCV", "MCH", "MCHC", "Platelet", "RDW",
+                                  "NEU", "LYM", "MONO", "EOS", "BASO", "NEU#", "LYM#", "MONO#", "EOS#", "BASO#",
+                                  "P.T.", "PT INR", "MNPT", "APTT", "APTT RATIO" }),
+
+            ("J", "血糖檢查", new[] { "GLU(PC)" }),
+        };
+
+        /// <summary>
+        /// 把一批人的檢驗結果整理成「病歷號 => 每一類開齊了沒」，沒有任何檢驗的人也會有一筆 (三類都是 X)
+        /// </summary>
+        private static Dictionary<string, List<ChkItem>> BuildLabChk(DataTable dtLab, List<string> MrList)
+        {
+            // 只在意有沒有開這個項目，值是多少不管，湊成 病歷號|類別|項目 一個集合就夠比對。
+            // 忽略大小寫，DB 存的是 Na、Hb，設定裡怎麼打都對得到
+            HashSet<string> done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (DataRow r in dtLab.AsEnumerable())
+            {
+                done.Add($"{r.pCol("chMRNo")}|{r.pCol("chTeamNo")}|{r.pCol("chHead")}");
+            }
+
+            Dictionary<string, List<ChkItem>> chks = new Dictionary<string, List<ChkItem>>();
+
+            // 同一個病歷號在清單上可能有好幾天的預約，檢驗抓的是同一個區間，算一次就好
+            foreach (string mrNo in MrList.Distinct())
+            {
+                chks[mrNo] = LabChkTeams.Select(t =>
+                {
+                    int have = t.Heads.Count(h => done.Contains($"{mrNo}|{t.TeamNo}|{h}"));
+
+                    return new ChkItem(t.TeamNam, have == 0 ? "X" : have == t.Heads.Length ? "V" : "!");
+                }).ToList();
+            }
+
+            return chks;
+        }
+
+        // 術前只看這三項檢查。32001C 那類是健保碼 (chOp4OrdHis)，L18001 是院內醫令碼 (chOp4OrdNo)；
+        // 這份設定同時被上面組 SQL 條件和下面判定用，改一處就好
+        private static readonly (string Nam, string Col, string[] Codes)[] ExamChks =
+        {
+            ("CXR", "chOp4OrdHis", new[] { "32001C", "32002C" }),
+            ("KUB", "chOp4OrdHis", new[] { "32006C", "32011C" }),
+            ("EKG", "chOp4OrdNo", new[] { "L18001" }),
+        };
+
+        /// <summary>
+        /// 把一批人的門診醫令整理成「病歷號 => 每一項檢查開了沒」。
+        /// 一項只要對到任一個代碼就算有，所以只會是 V 或 X
+        /// </summary>
+        private static Dictionary<string, List<ChkItem>> BuildExamChk(DataTable dtExam, List<string> MrList)
+        {
+            // 醫令先照病歷號分堆，每個人只要看自己那幾列
+            ILookup<string, DataRow> byMrNo = dtExam.AsEnumerable().ToLookup(r => r.pCol("chOp0PMrNo"));
+
+            Dictionary<string, List<ChkItem>> chks = new Dictionary<string, List<ChkItem>>();
+
+            foreach (string mrNo in MrList.Distinct())
+            {
+                // 沒醫令的人 byMrNo[mrNo] 是空的，三項就都是 X
+                chks[mrNo] = ExamChks.Select(e =>
+                    new ChkItem(e.Nam, byMrNo[mrNo].Any(r => e.Codes.Contains(r.pCol(e.Col))) ? "V" : "X")).ToList();
+            }
+
+            return chks;
         }
     }
 }
