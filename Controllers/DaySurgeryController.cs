@@ -585,6 +585,26 @@ namespace WebDaySurgery.Controllers
             // 這個人在區間內有好幾筆預約的話，每一列的檢驗欄會長一樣，檢驗只查了一個區間
             Dictionary<string, List<ChkItem>> labChks = BuildLabChk(dtLw, dt.AsEnumerable().Select(i => i.pCol("chRsMrNo")).ToList());
 
+            //檢查
+            // 起迄的道理跟上面檢驗一樣，DateS 往前推才抓得到已經做過的
+            string XDateS = sDateS.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
+            string XwDateE = sDateE;
+
+            // 病歷號要一起撈回來，等一下靠它把醫令分給每一列
+            SQL = $"\n select B.chOp0PMrNo, chOp1Date, chOp1Time, chOp1Room, intOp1No, chOp4OrdName, chOp4OrdNo, chOp4OrdHis ";
+            SQL += $"\n From DB_OPD..OpdOrdTbl A  ";
+            SQL += $"\n Join DB_OPD..OpdRegPtnTbl B  ";
+            SQL += $"\n On A.chOp1Date=B.chOp0Date And A.chOp1Time=B.chOp0Time And A.chOp1Room=B.chOp0Room And A.intOp1No=B.intOp0No   ";
+            SQL += $"\n where ";
+            SQL += $"\n chOp1Date between '{XDateS}' and '{XwDateE}' ";
+            SQL += $"\n and B.chOp0PMrNo = '{sMrNo}' ";
+            // 畫面只看這三項，其他醫令不用撈回來；這裡跟判定用的是同一份設定
+            SQL += $"\n and ( {ExamChks.Select(e => $"A.{e.Col} in ({e.Codes.ToList().pJoinWithQuote()})").ToList().pJoin(" or ")} ) ";
+
+            DataTable dtX = _db.executesqldt(SQL);
+
+            Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtX, dt.AsEnumerable().Select(i => i.pCol("chRsMrNo")).ToList());
+
             return dt.AsEnumerable().Select(r =>
             {
                 // 沒排刀的預約一樣要留在清單上，只是這兩欄空著
@@ -607,6 +627,7 @@ namespace WebDaySurgery.Controllers
 
                     // 查的就是這個人，一定找得到
                     Labs = labChks[r.pCol("chRsMrNo")],
+                    Exams = examChks[r.pCol("chRsMrNo")],
                 };
             }).ToList();
         }
