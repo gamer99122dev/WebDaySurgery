@@ -60,9 +60,9 @@ namespace WebDaySurgery.Controllers
         [HttpGet]
         public IActionResult BedBooking(DateTime? DateS, DateTime? DateE)
         {
-            // 沒帶參數就是首次載入，預設當天起算三天
+            // 沒帶參數就是首次載入，預設當天起算七天
             DateTime dateS = DateS ?? DateTime.Today;
-            DateTime dateE = DateE ?? dateS.AddDays(3);
+            DateTime dateE = DateE ?? dateS.AddDays(7);
 
             ViewBag.DateS = dateS;
             ViewBag.DateE = dateE;
