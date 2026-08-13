@@ -121,8 +121,12 @@
                             </div>
                         }
                     </td>
+                    @* 網址得先跟麻醉系統的 API 換，寫不進 href，只好也走一張 form；開新分頁才不會弄丟這張清單 *@
                     <td class="text-nowrap">
-                        <a href="#">門診評估單</a>
+                        <form method="post" asp-action="AnesRecord" target="_blank">
+                            <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">門診評估單</button>
+                        </form>
                     </td>
                 </tr>
             }
@@ -132,9 +136,9 @@
 
 @section Scripts {
 <script>
-    // 點整列＝點該列姓名那顆按鈕。姓名本身有 button，點它會重複觸發，所以跳過
+    // 點整列＝點該列姓名那顆按鈕。列內本來就有連結或按鈕的，讓它做自己的事，不要被整列點擊蓋掉
     document.querySelectorAll('#patientTable tbody tr').forEach(tr => tr.addEventListener('click', e => {
-        if (!e.target.closest('button')) tr.querySelector('button[name="MrNo"]').click();
+        if (!e.target.closest('a, button')) tr.querySelector('button[name="MrNo"]').click();
     }));
 </script>
 }

@@ -144,6 +144,23 @@ namespace WebDaySurgery.Controllers
             return View();
         }
 
+        // 麻醉系統要的使用者 ID (必填)。這支程式還沒有登入機制，先固定帶一個，接上登入後改帶登入者
+        private const string AnesUserId = "11208";
+
+        // 階段一 (2) 麻醉紀錄 — 門診評估單
+        // 網址要先跟麻醉系統的 API 換，換到才知道導去哪，所以不能直接寫在 href 上，中間得走這一手
+        [HttpPost]
+        public async Task<IActionResult> AnesRecord(string MrNo, DateTime ResvDate)
+        {
+            // 術前評估抓手術日往前 14 天，跟檢驗同一個區間
+            string url = await ANESCaller.GetUrl(MrNo.pNullOrTrim(), AnesUserId,
+                                                 ResvDate.AddDays(-14).ToString("yyyy/MM/dd"),
+                                                 ResvDate.ToString("yyyy/MM/dd"));
+
+            // 查不到的時候 API 回的是訊息不是網址，原樣秀出來，不要導去怪地方
+            return url.StartsWith("http") ? Redirect(url) : Content(url);
+        }
+
         /// <summary>
         /// 查病歷號的生日與性別，算 eGFR 用；查不到回兩個空字串
         /// </summary>
