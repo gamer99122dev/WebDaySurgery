@@ -10,7 +10,7 @@
         : $"病歷號 {mrNo}　{DateTime.Today:yyyy/MM/dd} 起三個月內的預約";
 }
 
-<h1>@ViewData["Title"]</h1>
+<h1>@ViewData["Title"] <a asp-action="PatientListHelp" class="fs-6 align-middle">欄位說明</a></h1>
 <partial name="_TestEnv" />
 
 @* 兩個獨立查詢，各自一個 form。條碼槍刷病歷號等於打完數字再按 Enter，分開才不會誤送日期那張 *@

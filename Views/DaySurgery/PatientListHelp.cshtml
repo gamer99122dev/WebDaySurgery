@@ -1,0 +1,150 @@
+@using WebToolNet.UtilExtension
+@{
+    ViewData["Title"] = "查詢病人清單 — 欄位說明";
+
+    // 判定用的同一份設定，畫面只是把它排出來
+    (string TeamNo, string TeamNam, string[] Heads)[] labTeams = ViewBag.LabChkTeams;
+    (string Nam, string Col, string[] Codes)[] examChks = ViewBag.ExamChks;
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p class="text-muted">
+    病人清單最右邊的「檢驗」「檢查」兩欄，是替術前該完成的項目做的追蹤標記。
+    以下說明每個符號的意思、系統看的是哪些項目、以及往前追多久的資料。
+</p>
+
+<p><a asp-action="PatientList">‹ 回查詢病人清單</a></p>
+
+<h2 class="h4 mt-4">符號對照</h2>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle" style="max-width: 46rem;">
+        <thead class="table-light">
+            <tr>
+                <th class="text-nowrap">符號</th>
+                <th class="text-nowrap">意思</th>
+                <th>說明</th>
+            </tr>
+        </thead>
+        <tbody>
+            @* 符號和顏色跟清單同一套寫法，改一邊要記得兩邊一起改 *@
+            <tr>
+                <td><span class="badge bg-success">✓</span></td>
+                <td class="text-nowrap">完備</td>
+                <td>檢驗：這一類該有的項目全部都有報告。<br />檢查：這一項已經開立。</td>
+            </tr>
+            <tr>
+                <td><span class="badge bg-warning text-dark">!</span></td>
+                <td class="text-nowrap">缺項</td>
+                <td>這一類只有部分項目有報告，還缺幾項。<br />只會出現在「檢驗」欄，「檢查」欄不會有這個符號。</td>
+            </tr>
+            <tr>
+                <td><span class="badge bg-danger">✗</span></td>
+                <td class="text-nowrap">沒有</td>
+                <td>這一類／這一項在追蹤區間內一筆資料都沒有。</td>
+            </tr>
+            <tr>
+                <td class="text-muted">—</td>
+                <td class="text-nowrap">無資料</td>
+                <td>出現在「手術排程」「術式」欄，代表這筆預約還沒排到刀。</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="alert alert-info">
+    <strong>符號看的是「有沒有做」，不是「正不正常」。</strong>
+    ✓ 只代表報告已經回來、項目沒缺；數值是高是低不影響符號顏色。
+    要看實際數值與高低標記，請點病人姓名進入「病患檢驗資料」。
+</div>
+
+<h2 class="h4 mt-4">檢驗</h2>
+
+<p>系統會逐類比對「這一類該有的項目」與「這個病人實際有報告的項目」，再標上符號。</p>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th class="text-nowrap">類別</th>
+                <th>該有的項目</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ((string TeamNo, string TeamNam, string[] Heads) t in labTeams)
+            {
+                <tr>
+                    <td class="text-nowrap">@t.TeamNam <span class="text-muted">@t.Heads.Length 項</span></td>
+                    <td>@t.Heads.pJoin("、")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<h3 class="h6 text-muted mt-3">判定規則</h3>
+<ul>
+    <li><span class="badge bg-success">✓</span> 該類項目<strong>全部</strong>都找得到報告。</li>
+    <li><span class="badge bg-warning text-dark">!</span> 找得到<strong>一部分</strong>，但沒有全部。</li>
+    <li><span class="badge bg-danger">✗</span> <strong>一項也沒有</strong>。</li>
+</ul>
+
+<h3 class="h6 text-muted mt-3">資料範圍</h3>
+<ul>
+    <li>只採計<strong>已收件</strong>的檢驗報告，以<strong>收件日期</strong>落在區間內為準。</li>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前三個月，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：今天往前三個月，到今天往後三個月。</li>
+</ul>
+
+<h2 class="h4 mt-4">檢查</h2>
+
+<p>看的是<strong>門診醫令</strong>裡有沒有開立這幾張單。只要對到任一個代碼就算有，所以只會是 ✓ 或 ✗。</p>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle" style="max-width: 46rem;">
+        <thead class="table-light">
+            <tr>
+                <th class="text-nowrap">項目</th>
+                <th class="text-nowrap">認定的代碼</th>
+                <th class="text-nowrap">代碼來源</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ((string Nam, string Col, string[] Codes) e in examChks)
+            {
+                <tr>
+                    <td class="text-nowrap">@e.Nam <span class="text-muted">@e.Nam.pMapValue("CXR", "胸部X光", "KUB", "腹部X光", "EKG", "心電圖")</span></td>
+                    <td class="text-nowrap">@e.Codes.pJoin("、")</td>
+                    <td class="text-nowrap">@e.Col.pMapValue("chOp4OrdHis", "健保碼", "chOp4OrdNo", "院內醫令碼")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<h3 class="h6 text-muted mt-3">資料範圍</h3>
+<ul>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前三個月，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：今天往前三個月，到今天往後三個月。</li>
+</ul>
+
+<div class="alert alert-info">
+    <strong>✓ 代表「單子開了」，不代表「檢查做完了、報告出來了」。</strong>
+    這一欄追的是門診醫令，不看執行狀態，也不看報告結果。
+</div>
+
+<h2 class="h4 mt-4">兩件要留意的事</h2>
+
+<ul>
+    <li>
+        <strong>三個月是暫定值。</strong>
+        術前檢驗、檢查目前放寬成往前三個月，方便看到既有資料；
+        日後會調整回<strong>術前 14 天</strong>，屆時同一個病人的符號可能會變。
+    </li>
+    <li>
+        <strong>用病歷號查、同一人有多筆預約時，每一列的檢驗／檢查欄會長得一樣。</strong>
+        這兩欄是用整段區間查一次的結果，不是各自對應各自的手術日。
+        要看某一台刀當下的狀況，請改用<strong>手術日期</strong>查詢。
+    </li>
+</ul>

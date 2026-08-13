@@ -92,6 +92,18 @@ namespace WebDaySurgery.Controllers
             return View();
         }
 
+        // 階段一 (2) 查詢病人清單 (欄位說明)
+        // 純說明頁，沒有查詢條件。項目清單直接給判定時用的同一份設定，
+        // 以後改 LabChkTeams／ExamChks，說明頁跟著變，不用記得回來改文件
+        [HttpGet]
+        public IActionResult PatientListHelp()
+        {
+            ViewBag.LabChkTeams = LabChkTeams;
+            ViewBag.ExamChks = ExamChks;
+
+            return View();
+        }
+
         // 階段一 (3) 病患檢驗資料 (選人)
         // 病歷號走 POST body，不進網址，避免被改參數撈到別人的資料
         [HttpPost]
