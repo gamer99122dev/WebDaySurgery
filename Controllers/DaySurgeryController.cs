@@ -14,6 +14,44 @@ namespace WebDaySurgery.Controllers
     {
         private readonly WebToolNet.DBConn.DBConn _db;
 
+        // ── 設定 ────────────────────────────────────────────────
+        // 要切換的開關、要增減的清單都集中在這裡，改這裡就好
+
+        // chRsReason 第七位 1 = 日間手術。測試環境還沒有這一位的資料，
+        // 先設 false 全部撈出來；要只顯示日間手術的病人就改成 true
+        private const bool DaySurgeryOnly = true;
+
+        // 麻醉系統要的使用者 ID (必填)。這支程式還沒有登入機制，先固定帶一個，接上登入後改帶登入者
+        private const string AnesUserId = "11208";
+
+        // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
+        // 要多看一類、或某一類要增減項目，改這裡就好
+        private static readonly (string TeamNo, string TeamNam, string[] Heads)[] LabChkTeams =
+        {
+            ("C", "生化", new[] { "BUN", "CREA", "Na", "K", "AST", "ALT" }),
+
+            ("H", "血液", new[] { "WBC", "RBC", "Hb", "Hct", "MCV", "MCH", "MCHC", "Platelet", "RDW",
+                                  "NEU", "LYM", "MONO", "EOS", "BASO", "NEU#", "LYM#", "MONO#", "EOS#", "BASO#",
+                                  "P.T.", "PT INR", "MNPT", "APTT", "APTT RATIO" }),
+
+            ("J", "血糖檢查", new[] { "GLU(PC)" }),
+        };
+
+        // 術前只看這三項檢查。32001C 那類是健保碼 (chOp4OrdHis)，L18001 是院內醫令碼 (chOp4OrdNo)；
+        // 這份設定同時被組 SQL 條件和判定用，改一處就好
+        private static readonly (string Nam, string Col, string[] Codes)[] ExamChks =
+        {
+            ("CXR", "chOp4OrdHis", new[] { "32001C", "32002C" }),
+            ("KUB", "chOp4OrdHis", new[] { "32006C", "32011C" }),
+            ("EKG", "chOp4OrdNo", new[] { "L18001" }),
+        };
+
+        // 病歷號不進網址，POST 轉 GET 之間改用 TempData 帶；清單和檢驗資料頁各用各的
+        private const string TempChartNo = "ChartNo";
+        private const string TempMrNo = "MrNo";
+
+        // ── 設定結束 ────────────────────────────────────────────
+
         public DaySurgeryController(WebToolNet.DBConn.DBConn db) => _db = db;
 
         // 階段一 (1) 預定床位
@@ -33,10 +71,6 @@ namespace WebDaySurgery.Controllers
 
             return View();
         }
-
-        // 病歷號不進網址，POST 轉 GET 之間改用 TempData 帶；清單和檢驗資料頁各用各的
-        private const string TempChartNo = "ChartNo";
-        private const string TempMrNo = "MrNo";
 
         // 階段一 (2) 查詢病人清單 (查詢)
         // 查完只存條件、轉 GET (PRG)，畫面永遠是 GET 畫出來的，
@@ -143,9 +177,6 @@ namespace WebDaySurgery.Controllers
 
             return View();
         }
-
-        // 麻醉系統要的使用者 ID (必填)。這支程式還沒有登入機制，先固定帶一個，接上登入後改帶登入者
-        private const string AnesUserId = "11208";
 
         // 階段一 (2) 麻醉紀錄 — 門診評估單
         // 網址要先跟麻醉系統的 API 換，換到才知道導去哪，所以不能直接寫在 href 上，中間得走這一手
@@ -671,6 +702,18 @@ namespace WebDaySurgery.Controllers
             }).ToList();
         }
 
+        
+
+        /// <summary>
+        /// chRsReason 是位置旗標，第七位 1 才是日間手術。
+        /// pCol 會 Trim，前面有空白就會把位置洗掉，這裡直接取原值
+        /// </summary>
+        private static bool IsDaySurgery(DataRow r)
+        {
+            string reason = r["chRsReason"]?.ToString() ?? "";
+            return reason.Length >= 7 && reason[6] == '1';
+        }
+
         /// <summary>
         /// 查詢指定日期區間、指定科別、尚未產生住院號的預約住院資料
         /// </summary>
@@ -690,9 +733,12 @@ namespace WebDaySurgery.Controllers
 
             DataTable dt = _db.executesqldt(SQL);
 
+            // 不在 SQL 裡挑第七位，全部撈回來再用程式碼濾，後面的排程／檢驗／檢查也就只查濾剩的人
+            List<DataRow> rows = dt.AsEnumerable().Where(i => !DaySurgeryOnly || IsDaySurgery(i)).ToList();
+
             List<string> MrList = new List<string>();
 
-            foreach (var i in dt.AsEnumerable())
+            foreach (var i in rows)
             {
                 MrList.Add(i.pCol("chRsMrNo"));
             }
@@ -769,8 +815,8 @@ namespace WebDaySurgery.Controllers
 
             Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtX, MrList);
 
-            // chRsReason、chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
-            return dt.AsEnumerable().Select(r =>
+            // chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
+            return rows.Select(r =>
             {
                 // 沒排刀的病人一樣要留在清單上，只是這兩欄空著
                 schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
@@ -796,19 +842,6 @@ namespace WebDaySurgery.Controllers
                 };
             }).ToList();
         }
-
-        // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
-        // 要多看一類、或某一類要增減項目，改這裡就好
-        private static readonly (string TeamNo, string TeamNam, string[] Heads)[] LabChkTeams =
-        {
-            ("C", "生化", new[] { "BUN", "CREA", "Na", "K", "AST", "ALT" }),
-
-            ("H", "血液", new[] { "WBC", "RBC", "Hb", "Hct", "MCV", "MCH", "MCHC", "Platelet", "RDW",
-                                  "NEU", "LYM", "MONO", "EOS", "BASO", "NEU#", "LYM#", "MONO#", "EOS#", "BASO#",
-                                  "P.T.", "PT INR", "MNPT", "APTT", "APTT RATIO" }),
-
-            ("J", "血糖檢查", new[] { "GLU(PC)" }),
-        };
 
         /// <summary>
         /// 把一批人的檢驗結果整理成「病歷號 => 每一類開齊了沒」，沒有任何檢驗的人也會有一筆 (三類都是 X)
@@ -839,15 +872,6 @@ namespace WebDaySurgery.Controllers
 
             return chks;
         }
-
-        // 術前只看這三項檢查。32001C 那類是健保碼 (chOp4OrdHis)，L18001 是院內醫令碼 (chOp4OrdNo)；
-        // 這份設定同時被上面組 SQL 條件和下面判定用，改一處就好
-        private static readonly (string Nam, string Col, string[] Codes)[] ExamChks =
-        {
-            ("CXR", "chOp4OrdHis", new[] { "32001C", "32002C" }),
-            ("KUB", "chOp4OrdHis", new[] { "32006C", "32011C" }),
-            ("EKG", "chOp4OrdNo", new[] { "L18001" }),
-        };
 
         /// <summary>
         /// 把一批人的門診醫令整理成「病歷號 => 每一項檢查開了沒」。
