@@ -589,8 +589,11 @@ namespace WebDaySurgery.Controllers
 
             DataTable dt = _db.executesqldt(SQL);
 
+            // 不在 SQL 裡挑第七位，全部撈回來再用程式碼濾，後面的檢驗／檢查也就只查濾剩的住院日
+            List<DataRow> rows = dt.AsEnumerable().Where(i => !DaySurgeryOnly || IsDaySurgery(i)).ToList();
+
             // 這個人這段期間沒預約就不用再查排程了
-            if (dt.Rows.Count == 0) return new List<Resv>();
+            if (rows.Count == 0) return new List<Resv>();
 
             //手術排程、術式
             SQL = "\n select ";
@@ -617,7 +620,7 @@ namespace WebDaySurgery.Controllers
             }
 
             // 查的就是同一個人，每一列的病歷號都一樣，判定時當 key 用
-            string mrNoKey = dt.Rows[0].pCol("chRsMrNo");
+            string mrNoKey = rows[0].pCol("chRsMrNo");
             List<string> mrList = new List<string> { mrNoKey };
 
             // 這支查的是「今天起三個月內的預約」，同一個人可能有好幾台刀，
@@ -626,7 +629,7 @@ namespace WebDaySurgery.Controllers
             Dictionary<string, List<ChkItem>> labChks = new Dictionary<string, List<ChkItem>>();
             Dictionary<string, List<ChkItem>> examChks = new Dictionary<string, List<ChkItem>>();
 
-            foreach (string pDate in dt.AsEnumerable().Select(i => i.pCol("chRsPDate")).Distinct())
+            foreach (string pDate in rows.Select(i => i.pCol("chRsPDate")).Distinct())
             {
                 //檢驗
                 string LwDateE = pDate.pSQLValidator();
@@ -675,7 +678,7 @@ namespace WebDaySurgery.Controllers
                 examChks[pDate] = BuildExamChk(dtX, mrList)[mrNoKey];
             }
 
-            return dt.AsEnumerable().Select(r =>
+            return rows.Select(r =>
             {
                 // 沒排刀的預約一樣要留在清單上，只是這兩欄空著
                 schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
