@@ -136,8 +136,8 @@ namespace WebDaySurgery.Controllers
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex) = QueryPatientBasic(mrNo);
 
-            // 術前檢驗原本抓手術日往前 14 天，暫時放寬成三個月方便看資料，之後要改回來
-            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-3), ResvDate.Value);
+            // 術前檢驗抓手術日往前 14 天
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-14), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -568,54 +568,64 @@ namespace WebDaySurgery.Controllers
                 schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
             }
 
-            //檢驗
-            // 這支查的是「今天起三個月內的預約」，往後的日子還不會有檢驗，
-            // 起日要從 DateS 再往前推才抓得到，不能照 QueryResv 用 DateE 往前推
-            string LwDateS = sDateS.pToDateTime().AddMonths(-3).pRyyymmdd();
-            string LwDateE = sDateE;//TODO:暫定往前3個月，後續要改成14天
+            // 查的就是同一個人，每一列的病歷號都一樣，判定時當 key 用
+            string mrNoKey = dt.Rows[0].pCol("chRsMrNo");
+            List<string> mrList = new List<string> { mrNoKey };
 
-            // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
-            // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
-            SQL = $"\n select B.chMRNo, A.chTeamNo, RTrim(B.chHead) as chHead ";
-            SQL += $"\n FROM DB_ADM..AdmRqtrcpLWTbl A  ";
-            SQL += $"\n LEFT JOIN DB_ADM..AdmResultRPTbl B         ";
-            SQL += $"\n      ON A.chGReqNo = B.chGReqNo AND A.chReqNo = B.chReqNo ";
-            SQL += $"\n LEFT JOIN DB_ADM..AdmLabSendToTbl E ON A.chSTCod = E.chSTCod   ";
-            SQL += $"\n    , DB_ADM..AdmLabTeamTbl C       ";
-            SQL += $"\n WHERE A.chTeamNo = C.chTeamNo ";
-            SQL += $"\n   AND B.chMRNo = '{sMrNo}' ";
-            SQL += $"\n   AND B.chStat IN ('10','20','30','60','70') ";
-            // chRcpDTM 是民國年月日時分 11 碼 (11501010000)，7 碼日期要補上時分才比得對，
-            // 不然 '11508122359' > '1150812'，當天的報告會被 BETWEEN 濾掉
-            SQL += $"\n   AND B.chRcpDTM BETWEEN '{LwDateS}0000' AND '{LwDateE}2359' ";
-            // 畫面只看這幾類，其他類別不用撈回來
-            SQL += $"\n   AND A.chTeamNo IN ({LabChkTeams.Select(t => t.TeamNo).ToList().pJoinWithQuote()}) ";
+            // 這支查的是「今天起三個月內的預約」，同一個人可能有好幾台刀，
+            // 每一列的檢驗／檢查都要照自己那台刀的住院日往前推 14 天，
+            // 一個區間套全部會把別台刀的資料算進來，所以逐個住院日各查一次
+            Dictionary<string, List<ChkItem>> labChks = new Dictionary<string, List<ChkItem>>();
+            Dictionary<string, List<ChkItem>> examChks = new Dictionary<string, List<ChkItem>>();
 
-            DataTable dtLw = _db.executesqldt(SQL);
+            foreach (string pDate in dt.AsEnumerable().Select(i => i.pCol("chRsPDate")).Distinct())
+            {
+                //檢驗
+                string LwDateE = pDate.pSQLValidator();
+                string LwDateS = pDate.pToDateTime().AddDays(-14).pRyyymmdd();
 
-            // 只有一個人，但旗標怎麼算跟清單同一套。
-            // 這個人在區間內有好幾筆預約的話，每一列的檢驗欄會長一樣，檢驗只查了一個區間
-            Dictionary<string, List<ChkItem>> labChks = BuildLabChk(dtLw, dt.AsEnumerable().Select(i => i.pCol("chRsMrNo")).ToList());
+                // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
+                // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
+                SQL = $"\n select B.chMRNo, A.chTeamNo, RTrim(B.chHead) as chHead ";
+                SQL += $"\n FROM DB_ADM..AdmRqtrcpLWTbl A  ";
+                SQL += $"\n LEFT JOIN DB_ADM..AdmResultRPTbl B         ";
+                SQL += $"\n      ON A.chGReqNo = B.chGReqNo AND A.chReqNo = B.chReqNo ";
+                SQL += $"\n LEFT JOIN DB_ADM..AdmLabSendToTbl E ON A.chSTCod = E.chSTCod   ";
+                SQL += $"\n    , DB_ADM..AdmLabTeamTbl C       ";
+                SQL += $"\n WHERE A.chTeamNo = C.chTeamNo ";
+                SQL += $"\n   AND B.chMRNo = '{sMrNo}' ";
+                SQL += $"\n   AND B.chStat IN ('10','20','30','60','70') ";
+                // chRcpDTM 是民國年月日時分 11 碼 (11501010000)，7 碼日期要補上時分才比得對，
+                // 不然 '11508122359' > '1150812'，當天的報告會被 BETWEEN 濾掉
+                SQL += $"\n   AND B.chRcpDTM BETWEEN '{LwDateS}0000' AND '{LwDateE}2359' ";
+                // 畫面只看這幾類，其他類別不用撈回來
+                SQL += $"\n   AND A.chTeamNo IN ({LabChkTeams.Select(t => t.TeamNo).ToList().pJoinWithQuote()}) ";
 
-            //檢查
-            // 起迄的道理跟上面檢驗一樣，DateS 往前推才抓得到已經做過的
-            string XDateS = sDateS.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
-            string XwDateE = sDateE;
+                DataTable dtLw = _db.executesqldt(SQL);
 
-            // 病歷號要一起撈回來，等一下靠它把醫令分給每一列
-            SQL = $"\n select B.chOp0PMrNo, chOp1Date, chOp1Time, chOp1Room, intOp1No, chOp4OrdName, chOp4OrdNo, chOp4OrdHis ";
-            SQL += $"\n From DB_OPD..OpdOrdTbl A  ";
-            SQL += $"\n Join DB_OPD..OpdRegPtnTbl B  ";
-            SQL += $"\n On A.chOp1Date=B.chOp0Date And A.chOp1Time=B.chOp0Time And A.chOp1Room=B.chOp0Room And A.intOp1No=B.intOp0No   ";
-            SQL += $"\n where ";
-            SQL += $"\n chOp1Date between '{XDateS}' and '{XwDateE}' ";
-            SQL += $"\n and B.chOp0PMrNo = '{sMrNo}' ";
-            // 畫面只看這三項，其他醫令不用撈回來；這裡跟判定用的是同一份設定
-            SQL += $"\n and ( {ExamChks.Select(e => $"A.{e.Col} in ({e.Codes.ToList().pJoinWithQuote()})").ToList().pJoin(" or ")} ) ";
+                // 只有一個人，但旗標怎麼算跟清單同一套
+                labChks[pDate] = BuildLabChk(dtLw, mrList)[mrNoKey];
 
-            DataTable dtX = _db.executesqldt(SQL);
+                //檢查
+                // 起迄跟上面檢驗一樣，都是這台刀的住院日往前推 14 天
+                string XDateS = LwDateS;
+                string XwDateE = LwDateE;
 
-            Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtX, dt.AsEnumerable().Select(i => i.pCol("chRsMrNo")).ToList());
+                // 病歷號要一起撈回來，等一下靠它把醫令分給每一列
+                SQL = $"\n select B.chOp0PMrNo, chOp1Date, chOp1Time, chOp1Room, intOp1No, chOp4OrdName, chOp4OrdNo, chOp4OrdHis ";
+                SQL += $"\n From DB_OPD..OpdOrdTbl A  ";
+                SQL += $"\n Join DB_OPD..OpdRegPtnTbl B  ";
+                SQL += $"\n On A.chOp1Date=B.chOp0Date And A.chOp1Time=B.chOp0Time And A.chOp1Room=B.chOp0Room And A.intOp1No=B.intOp0No   ";
+                SQL += $"\n where ";
+                SQL += $"\n chOp1Date between '{XDateS}' and '{XwDateE}' ";
+                SQL += $"\n and B.chOp0PMrNo = '{sMrNo}' ";
+                // 畫面只看這三項，其他醫令不用撈回來；這裡跟判定用的是同一份設定
+                SQL += $"\n and ( {ExamChks.Select(e => $"A.{e.Col} in ({e.Codes.ToList().pJoinWithQuote()})").ToList().pJoin(" or ")} ) ";
+
+                DataTable dtX = _db.executesqldt(SQL);
+
+                examChks[pDate] = BuildExamChk(dtX, mrList)[mrNoKey];
+            }
 
             return dt.AsEnumerable().Select(r =>
             {
@@ -637,9 +647,9 @@ namespace WebDaySurgery.Controllers
                     OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
                     OpName = sch?.pCol("術式一") ?? "",
 
-                    // 查的就是這個人，一定找得到
-                    Labs = labChks[r.pCol("chRsMrNo")],
-                    Exams = examChks[r.pCol("chRsMrNo")],
+                    // 每一列照自己的住院日算，key 就是從這批資料撈出來的，一定找得到
+                    Labs = labChks[r.pCol("chRsPDate")],
+                    Exams = examChks[r.pCol("chRsPDate")],
                 };
             }).ToList();
         }
@@ -699,7 +709,7 @@ namespace WebDaySurgery.Controllers
             }
 
             //檢驗
-            string LwDateS = sDateE.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
+            string LwDateS = sDateE.pToDateTime().AddDays(-14).pRyyymmdd();
             string LwDateE = sDateE;
 
             // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
@@ -725,7 +735,7 @@ namespace WebDaySurgery.Controllers
 
 
             //檢查
-            string XDateS = sDateE.pToDateTime().AddMonths(-3).pRyyymmdd();//TODO:暫定往前3個月，後續要改成14天
+            string XDateS = sDateE.pToDateTime().AddDays(-14).pRyyymmdd();
             string XwDateE = sDateE;
             // 病歷號要一起撈回來，等一下靠它把醫令分給每一列
             SQL = $"\n select B.chOp0PMrNo, chOp1Date, chOp1Time, chOp1Room, intOp1No, chOp4OrdName, chOp4OrdNo, chOp4OrdHis ";
