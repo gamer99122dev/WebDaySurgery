@@ -54,6 +54,7 @@
                         <td class="bed-slot bed-booked">
                             <div class="bed-sec">@Sec[booked[i].SecNo]</div>
                             <div class="bed-dr">@booked[i].DrName</div>
+                            <div class="bed-pat">@booked[i].MrNo @booked[i].PName</div>
                         </td>
                     }
                     else
@@ -68,7 +69,7 @@
 
 <style>
     .bed-table {
-        max-width: 52rem;
+        max-width: 100%;
         table-layout: fixed;
         border-collapse: separate;
         border-spacing: 0;
@@ -129,6 +130,9 @@
 
     /* 醫師姓名是這張表最重要的資訊，字級最大、最深 */
     .bed-dr { font-size: 1.35rem; font-weight: 700; color: #212529; }
+
+    /* 病歷號＋姓名是次要資訊，字級比醫師小一階 */
+    .bed-pat { font-size: 1rem; color: #343a40; font-variant-numeric: tabular-nums; }
 </style>
 
 @section Scripts {
