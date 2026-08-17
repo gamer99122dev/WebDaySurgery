@@ -5,12 +5,13 @@
     // 判定用的同一份設定，畫面只是把它排出來
     (string TeamNo, string TeamNam, string[] Heads)[] labTeams = ViewBag.LabChkTeams;
     (string Nam, string Col, string[] Codes)[] examChks = ViewBag.ExamChks;
+    string bloodPrepOrdNo = ViewBag.BloodPrepOrdNo;
 }
 
 <h1>@ViewData["Title"]</h1>
 
 <p class="text-muted">
-    病人清單最右邊的「檢驗」「檢查」兩欄，是替術前該完成的項目做的追蹤標記。
+    病人清單最右邊的「檢驗」「檢查」「備血」三欄，是替術前該完成的項目做的追蹤標記。
     以下說明每個符號的意思、系統看的是哪些項目、以及往前追多久的資料。
 </p>
 
@@ -32,12 +33,12 @@
             <tr>
                 <td><span class="badge bg-success">✓</span></td>
                 <td class="text-nowrap">完備</td>
-                <td>檢驗：這一類該有的項目全部都有報告。<br />檢查：這一項已經開立。</td>
+                <td>檢驗：這一類該有的項目全部都有報告。<br />檢查／備血：這一項已經開立。</td>
             </tr>
             <tr>
                 <td><span class="badge bg-warning text-dark">!</span></td>
                 <td class="text-nowrap">缺項</td>
-                <td>這一類只有部分項目有報告，還缺幾項。<br />只會出現在「檢驗」欄，「檢查」欄不會有這個符號。</td>
+                <td>這一類只有部分項目有報告，還缺幾項。<br />只會出現在「檢驗」欄，「檢查」「備血」欄不會有這個符號。</td>
             </tr>
             <tr>
                 <td><span class="badge bg-danger">✗</span></td>
@@ -132,5 +133,23 @@
 <div class="alert alert-info">
     <strong>✓ 代表「單子開了」，不代表「檢查做完了、報告出來了」。</strong>
     這一欄追的是門診醫令，不看執行狀態，也不看報告結果。
+</div>
+
+<h2 class="h4 mt-4">備血</h2>
+
+<p>
+    跟檢查一樣看<strong>門診醫令</strong>，認的是院內醫令碼 <code>@bloodPrepOrdNo</code>。
+    只有這一個代碼，開了就是 ✓，沒開就是 ✗。
+</p>
+
+<h3 class="h6 text-muted mt-3">資料範圍</h3>
+<ul>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前 14 天，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 14 天，到該筆手術日當天。</li>
+</ul>
+
+<div class="alert alert-info">
+    <strong>✓ 代表「備血單開了」，不代表「血備好了」。</strong>
+    這一欄追的是門診醫令，不看血庫的作業狀態。
 </div>
 

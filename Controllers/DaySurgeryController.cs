@@ -137,6 +137,7 @@ namespace WebDaySurgery.Controllers
         {
             ViewBag.LabChkTeams = LabChkTeams;
             ViewBag.ExamChks = ExamChks;
+            ViewBag.BloodPrepOrdNo = BloodPrepOrdNo;
 
             return View();
         }
