@@ -62,6 +62,7 @@
                 <th>術式</th>
                 <th>檢驗</th>
                 <th>檢查</th>
+                <th>備血</th>
                 <th>麻醉紀錄</th>
             </tr>
         </thead>
@@ -120,6 +121,10 @@
                                 <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
                             </div>
                         }
+                    </td>
+                    @* 只有一項醫令，開了就是 ✓，沒開就是 ✗ *@
+                    <td class="text-nowrap">
+                        <span class="badge @(r.BloodPrep ? "bg-success" : "bg-danger")">@(r.BloodPrep ? "✓" : "✗")</span>
                     </td>
                     @* 網址得先跟麻醉系統的 API 換，寫不進 href，只好也走一張 form；開新分頁才不會弄丟這張清單 *@
                     <td class="text-nowrap">

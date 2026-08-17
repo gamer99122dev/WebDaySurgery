@@ -46,6 +46,9 @@ namespace WebDaySurgery.Controllers
             ("EKG", "chOp4OrdNo", new[] { "L18001" }),
         };
 
+        // 備血的院內醫令碼 (chOp4OrdNo)。只有一項，開了就是有，不像檢查要比好幾個代碼
+        private const string BloodPrepOrdNo = "L11004";
+
         // 病歷號不進網址，POST 轉 GET 之間改用 TempData 帶；清單和檢驗資料頁各用各的
         private const string TempChartNo = "ChartNo";
         private const string TempMrNo = "MrNo";
@@ -582,7 +585,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n chRsMrNo = '{sMrNo}' ";
             SQL += $"\n AND chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
             SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
-            SQL += $"\n AND chRsAdmCaseNo IS NULL";
+            //SQL += $"\n AND chRsAdmCaseNo IS NULL";
             // 這裡的區間橫跨數個月，畫面照日期由近到遠排
             SQL += $"\n ORDER BY chRsPDate";
 
@@ -628,6 +631,7 @@ namespace WebDaySurgery.Controllers
             // 一個區間套全部會把別台刀的資料算進來，所以逐個住院日各查一次
             Dictionary<string, List<ChkItem>> labChks = new Dictionary<string, List<ChkItem>>();
             Dictionary<string, List<ChkItem>> examChks = new Dictionary<string, List<ChkItem>>();
+            Dictionary<string, bool> bloodPreps = new Dictionary<string, bool>();
 
             foreach (string pDate in rows.Select(i => i.pCol("chRsPDate")).Distinct())
             {
@@ -676,6 +680,10 @@ namespace WebDaySurgery.Controllers
                 DataTable dtX = _db.executesqldt(SQL);
 
                 examChks[pDate] = BuildExamChk(dtX, mrList)[mrNoKey];
+
+                //備血
+                // 起迄一樣是這台刀的住院日往前推 14 天
+                bloodPreps[pDate] = QueryBloodPrep(XDateS, XwDateE, mrList).Contains(mrNoKey);
             }
 
             return rows.Select(r =>
@@ -701,6 +709,7 @@ namespace WebDaySurgery.Controllers
                     // 每一列照自己的住院日算，key 就是從這批資料撈出來的，一定找得到
                     Labs = labChks[r.pCol("chRsPDate")],
                     Exams = examChks[r.pCol("chRsPDate")],
+                    BloodPrep = bloodPreps[r.pCol("chRsPDate")],
                 };
             }).ToList();
         }
@@ -731,7 +740,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n WHERE ";
             SQL += $"\n chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
             SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
-            SQL += $"\n AND chRsAdmCaseNo IS NULL";
+            //SQL += $"\n AND chRsAdmCaseNo IS NULL";
 
 
             DataTable dt = _db.executesqldt(SQL);
@@ -818,6 +827,13 @@ namespace WebDaySurgery.Controllers
 
             Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtX, MrList);
 
+            //備血
+            // 起迄跟上面檢驗、檢查一樣，都是住院日往前推 14 天
+            string TCDateS = sDateE.pToDateTime().AddDays(-14).pRyyymmdd();
+            string TCDateE = sDateE;
+
+            HashSet<string> bloodPreps = QueryBloodPrep(TCDateS, TCDateE, MrList);
+
             // chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
             return rows.Select(r =>
             {
@@ -842,8 +858,27 @@ namespace WebDaySurgery.Controllers
                     // MrList 就是從這批資料撈出來的，一定找得到
                     Labs = labChks[r.pCol("chRsMrNo")],
                     Exams = examChks[r.pCol("chRsMrNo")],
+                    BloodPrep = bloodPreps.Contains(r.pCol("chRsMrNo")),
                 };
             }).ToList();
+        }
+
+        /// <summary>
+        /// 查這批人在區間內有沒有開備血，回傳有開的病歷號。日期是民國 7 碼
+        /// </summary>
+        private HashSet<string> QueryBloodPrep(string DateS, string DateE, List<string> MrList)
+        {
+            // 只要知道「這個人有沒有開備血」，撈病歷號就夠，其他欄位用不到
+            string SQL = $"\n select B.chOp0PMrNo ";
+            SQL += $"\n From DB_OPD..OpdOrdTbl A  ";
+            SQL += $"\n Join DB_OPD..OpdRegPtnTbl B  ";
+            SQL += $"\n On A.chOp1Date=B.chOp0Date And A.chOp1Time=B.chOp0Time And A.chOp1Room=B.chOp0Room And A.intOp1No=B.intOp0No   ";
+            SQL += $"\n where ";
+            SQL += $"\n chOp1Date between '{DateS.pSQLValidator()}' and '{DateE.pSQLValidator()}' ";
+            SQL += $"\n and B.chOp0PMrNo in ({MrList.pJoinWithQuote()}) ";
+            SQL += $"\n and A.chOp4OrdNo = '{BloodPrepOrdNo}' ";
+
+            return _db.executesqldt(SQL).AsEnumerable().Select(r => r.pCol("chOp0PMrNo")).ToHashSet();
         }
 
         /// <summary>

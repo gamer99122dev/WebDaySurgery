@@ -23,6 +23,9 @@ namespace WebDaySurgery.Models
 
         // 以下來自檢查 (DB_OPD..OpdOrdTbl)，CXR／KUB／EKG 各自開了沒
         public List<ChkItem> Exams { get; init; } = new List<ChkItem>();
+
+        // 同樣來自 DB_OPD..OpdOrdTbl，備血醫令開了沒。只有一項，用不到 ChkItem
+        public bool BloodPrep { get; init; }
     }
 
     /// <summary>
