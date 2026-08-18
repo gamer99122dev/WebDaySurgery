@@ -545,28 +545,33 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n ORDER BY B.chGReqNo, B.chLReqNo, B.chReqNo";
 
             // SELECT 還有幾個目前沒人用的欄位 (chPName、chCommt、chAppDTM…)，用到再補上來
-            return _db.executesqldt(SQL).AsEnumerable().Select(r => new Lab
+            List<Lab> labs = new List<Lab>();
+            foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
             {
-                GReqNo = r.pCol("chGReqNo"),
-                LReqNo = r.pCol("chLReqNo"),
-                ReqNo = r.pCol("chReqNo"),
-                OrdNo = r.pCol("chOrdNo"),
-                Head = r.pCol("chHead"),
-                Speci = r.pCol("chSpeci"),
-                Val = r.pCol("chVal"),
-                Unit = r.pCol("chUnit"),
-                NL = r.pCol("chNL"),
-                NH = r.pCol("chNH"),
-                RcpDTM = r.pCol("chRcpDTM"),
-                VfDTM = r.pCol("chVfDTM"),
-                ModDTM = r.pCol("chModDTM2"),
-                TeamNo = r.pCol("chTeamNo"),
-                TeamNam = r.pCol("chTeamNam"),
-                TeamSeq = r.pCol("chTeamSeq"),
-                STCod = r.pCol("chSTCod"),
-                ItemSeq = r.pCol("chItemSeq"),
-                ItemFlag = r.pCol("itemflag"),
-            }).ToList();
+                labs.Add(new Lab
+                {
+                    GReqNo = r.pCol("chGReqNo"),
+                    LReqNo = r.pCol("chLReqNo"),
+                    ReqNo = r.pCol("chReqNo"),
+                    OrdNo = r.pCol("chOrdNo"),
+                    Head = r.pCol("chHead"),
+                    Speci = r.pCol("chSpeci"),
+                    Val = r.pCol("chVal"),
+                    Unit = r.pCol("chUnit"),
+                    NL = r.pCol("chNL"),
+                    NH = r.pCol("chNH"),
+                    RcpDTM = r.pCol("chRcpDTM"),
+                    VfDTM = r.pCol("chVfDTM"),
+                    ModDTM = r.pCol("chModDTM2"),
+                    TeamNo = r.pCol("chTeamNo"),
+                    TeamNam = r.pCol("chTeamNam"),
+                    TeamSeq = r.pCol("chTeamSeq"),
+                    STCod = r.pCol("chSTCod"),
+                    ItemSeq = r.pCol("chItemSeq"),
+                    ItemFlag = r.pCol("itemflag"),
+                });
+            }
+            return labs;
         }
 
         /// <summary>
@@ -687,12 +692,13 @@ namespace WebDaySurgery.Controllers
                 bloodPreps[pDate] = QueryBloodPrep(XDateS, XwDateE, mrList).Contains(mrNoKey);
             }
 
-            return rows.Select(r =>
+            List<Resv> resvs = new List<Resv>();
+            foreach (DataRow r in rows)
             {
                 // 沒排刀的預約一樣要留在清單上，只是這兩欄空著
                 schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
 
-                return new Resv
+                resvs.Add(new Resv
                 {
                     PName = r.pCol("chRsPName").pReplaceEUDC(),
                     MrNo = r.pCol("chRsMrNo"),
@@ -711,8 +717,9 @@ namespace WebDaySurgery.Controllers
                     Labs = labChks[r.pCol("chRsPDate")],
                     Exams = examChks[r.pCol("chRsPDate")],
                     BloodPrep = bloodPreps[r.pCol("chRsPDate")],
-                };
-            }).ToList();
+                });
+            }
+            return resvs;
         }
 
         
@@ -836,12 +843,13 @@ namespace WebDaySurgery.Controllers
             HashSet<string> bloodPreps = QueryBloodPrep(TCDateS, TCDateE, MrList);
 
             // chRsDrID1 目前畫面沒用到，要用再加一個屬性對上來
-            return rows.Select(r =>
+            List<Resv> resvs = new List<Resv>();
+            foreach (DataRow r in rows)
             {
                 // 沒排刀的病人一樣要留在清單上，只是這兩欄空著
                 schs.TryGetValue($"{r.pCol("chRsMrNo")}|{r.pCol("chRsPDate")}", out DataRow? sch);
 
-                return new Resv
+                resvs.Add(new Resv
                 {
                     PName = r.pCol("chRsPName").pReplaceEUDC(),
                     MrNo = r.pCol("chRsMrNo"),
@@ -860,8 +868,9 @@ namespace WebDaySurgery.Controllers
                     Labs = labChks[r.pCol("chRsMrNo")],
                     Exams = examChks[r.pCol("chRsMrNo")],
                     BloodPrep = bloodPreps.Contains(r.pCol("chRsMrNo")),
-                };
-            }).ToList();
+                });
+            }
+            return resvs;
         }
 
         /// <summary>
@@ -879,7 +888,12 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n and B.chOp0PMrNo in ({MrList.pJoinWithQuote()}) ";
             SQL += $"\n and A.chOp4OrdNo = '{BloodPrepOrdNo}' ";
 
-            return _db.executesqldt(SQL).AsEnumerable().Select(r => r.pCol("chOp0PMrNo")).ToHashSet();
+            HashSet<string> mrNos = new HashSet<string>();
+            foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
+            {
+                mrNos.Add(r.pCol("chOp0PMrNo"));
+            }
+            return mrNos;
         }
 
         /// <summary>
