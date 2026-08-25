@@ -79,6 +79,7 @@
                 <th>檢體</th>
                 <th>報告日期</th>
                 <th>修改時間</th>
+                <th>醫令開立日期</th>
                 <th>檢驗項目</th>
                 <th class="text-end">檢驗值</th>
                 <th>單位</th>
@@ -103,6 +104,7 @@
                 @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位 *@
                 string vfDTM = r.VfDTM.pLeft(11).pSyyymmddhhmm();
                 string modDTM = r.ModDTM.pLeft(11).pSyyymmddhhmm();
+                string appDTM = r.AppDTM.pLeft(11).pSyyymmddhhmm();
 
                 @* data-v 是這一列原本的值：篩選藏列後群組的第一列會換人，JS 要靠它重算哪幾格該顯示 *@
                 <tr data-team="@r.TeamNo" data-lreq="@r.LReqNo" data-vf="@r.VfDTM">
@@ -111,6 +113,7 @@
                     <td class="text-nowrap" data-v="@vfDTM">@(newVfDTM ? vfDTM : "")</td>
                     @* 修改時間跟類別／檢體一樣，同一張報告只在第一列顯示 *@
                     <td class="text-nowrap" data-v="@modDTM">@(newSpeci ? modDTM : "")</td>
+                    <td class="text-nowrap">@appDTM</td>
                     <td>@r.Head</td>
                     <td class="text-end @FlagClass(r.RPFlag)" style="font-variant-numeric: tabular-nums;">@r.Val</td>
                     <td class="text-nowrap">@r.Unit</td>

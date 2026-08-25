@@ -544,7 +544,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n AND B.chRcpDTM BETWEEN '{sDateS}' AND '{sDateE}' ";
             SQL += $"\n ORDER BY B.chGReqNo, B.chLReqNo, B.chReqNo";
 
-            // SELECT 還有幾個目前沒人用的欄位 (chPName、chCommt、chAppDTM…)，用到再補上來
+            // SELECT 還有幾個目前沒人用的欄位 (chPName、chCommt、chMdDTM…)，用到再補上來
             List<Lab> labs = new List<Lab>();
             foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
             {
@@ -563,6 +563,7 @@ namespace WebDaySurgery.Controllers
                     RcpDTM = r.pCol("chRcpDTM"),
                     VfDTM = r.pCol("chVfDTM"),
                     ModDTM = r.pCol("chModDTM2"),
+                    AppDTM = r.pCol("chAppDTM"),
                     TeamNo = r.pCol("chTeamNo"),
                     TeamNam = r.pCol("chTeamNam"),
                     TeamSeq = r.pCol("chTeamSeq"),
