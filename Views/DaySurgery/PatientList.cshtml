@@ -117,7 +117,19 @@
                         @foreach (ChkItem c in r.Exams)
                         {
                             <div>
-                                @c.Nam
+                                @* 有做才點得進報告；沒做的點進去也是空的，就不要做成按鈕 *@
+                                @if (c.Flag == "V")
+                                {
+                                    <form method="post" asp-action="ExamResultSearch" class="d-inline">
+                                        <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="MrNo" value="@r.MrNo" />
+                                        <button type="submit" name="Nam" value="@c.Nam" class="btn btn-link p-0 align-baseline">@c.Nam</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    @c.Nam
+                                }
                                 <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
                             </div>
                         }

@@ -1,0 +1,36 @@
+@using WebToolNet.UtilExtension
+@{
+    string nam = ViewBag.Nam;
+    ViewData["Title"] = $"{nam.pMapValue("CXR", "胸部X光", "KUB", "腹部X光", "EKG", "心電圖")} 檢查報告";
+    DateTime resvDate = ViewBag.ResvDate;
+    Resv patient = ViewBag.Patient;
+}
+
+<h1>@ViewData["Title"]</h1>
+<partial name="_TestEnv" />
+
+@* 表頭跟檢驗資料頁同一個排法，上排身分、下排本次手術 *@
+<div class="border rounded bg-light p-3 mb-3">
+    <div class="d-flex flex-wrap align-items-baseline gap-3">
+        <span class="fs-4 fw-bold">@patient.PName</span>
+        <span class="fs-5 text-muted">@patient.MrNo</span>
+        <span class="text-muted">@patient.Sex.pMapValue("1", "男", "0", "女")</span>
+    </div>
+    <div class="d-flex flex-wrap gap-4 mt-3">
+        <div>
+            <div class="small text-muted">科別</div>
+            <div class="text-nowrap">@Sec[patient.SecNo]</div>
+        </div>
+        <div>
+            <div class="small text-muted">醫師</div>
+            <div class="text-nowrap">@patient.DrName</div>
+        </div>
+        <div>
+            <div class="small text-muted">手術日期</div>
+            <div class="text-nowrap">@resvDate.ToString("yyyy/MM/dd") (@resvDate.pToDayOfWeekCh())</div>
+        </div>
+    </div>
+</div>
+
+@* 報告內容待補 *@
+<p class="text-muted">報告內容待補。</p>

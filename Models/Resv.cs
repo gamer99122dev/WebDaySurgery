@@ -1,4 +1,4 @@
-namespace WebDaySurgery.Models
+﻿namespace WebDaySurgery.Models
 {
     /// <summary>
     /// 預約住院資料一筆 (DB_ADM..AdmResvTbl)
