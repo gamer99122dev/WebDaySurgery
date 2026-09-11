@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# DB 密文檔。正常放在 C:\ProgramData\ 不在工作目錄裡，
+# 這條是擋有人手滑複製進來（見 Docs/NET10-MVC-MSSQL-DPAPI-Spec.md）
+*.dat

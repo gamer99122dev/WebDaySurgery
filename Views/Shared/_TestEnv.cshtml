@@ -1,6 +1,7 @@
 @inject IConfiguration Cfg
-@* 連的不是正式機 DB (172.17.2.31) 就掛紅字，免得把測試資料當正式的看 *@
-@if (!(Cfg.GetConnectionString("HIS") ?? "").Contains("172.17.2.31"))
+@* 不是正式站就掛紅字，免得把測試資料當正式的看。
+   看 Database:Target 這個開關，不要去比對連線字串裡的 IP —— 連線字串是秘密，不該讀進 View *@
+@if (Cfg["Database:Target"] != "Production")
 {
     <div class="h1 text-danger">測試環境</div>
 }
