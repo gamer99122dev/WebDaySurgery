@@ -24,6 +24,10 @@ namespace WebDaySurgery.Controllers
         // 麻醉系統要的使用者 ID (必填)。這支程式還沒有登入機制，先固定帶一個，接上登入後改帶登入者
         private const string AnesUserId = "11208";
 
+        // 術前檢驗／檢查／麻醉評估都抓手術日往前這麼多天。
+        // 畫面 (LabResult、PatientListHelp) 寫的「14 天」是需求者暫訂的文案，刻意不接這個常數
+        private const int LabLookbackDays = 31;
+
         // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
         // 要多看一類、或某一類要增減項目，改這裡就好。
         // 一項有好幾種寫法、有任一種就算數的，用 / 串起來當同一項 (GLU(PC)/GLU(AC))
@@ -175,8 +179,8 @@ namespace WebDaySurgery.Controllers
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex) = QueryPatientBasic(mrNo);
 
-            // 術前檢驗抓手術日往前 31 天
-            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-31), ResvDate.Value);
+            // 術前檢驗抓手術日往前 LabLookbackDays 天
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-LabLookbackDays), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -222,9 +226,9 @@ namespace WebDaySurgery.Controllers
         [HttpPost]
         public async Task<IActionResult> AnesRecord(string MrNo, DateTime ResvDate)
         {
-            // 術前評估抓手術日往前 30 天，跟檢驗同一個區間
+            // 術前評估跟檢驗同一個區間
             string url = await ANESCaller.GetUrl(MrNo.pNullOrTrim(), AnesUserId,
-                                                 ResvDate.AddDays(-30).ToString("yyyy/MM/dd"),
+                                                 ResvDate.AddDays(-LabLookbackDays).ToString("yyyy/MM/dd"),
                                                  ResvDate.ToString("yyyy/MM/dd"));
 
             // 查不到的時候 API 回的是訊息不是網址，原樣秀出來，不要導去怪地方
@@ -727,7 +731,7 @@ namespace WebDaySurgery.Controllers
             {
                 //檢驗
                 string LwDateE = pDate.pSQLValidator();
-                string LwDateS = pDate.pToDateTime().AddDays(-30).pRyyymmdd();
+                string LwDateS = pDate.pToDateTime().AddDays(-LabLookbackDays).pRyyymmdd();
 
                 // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
                 // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
@@ -911,7 +915,7 @@ namespace WebDaySurgery.Controllers
             }
 
             //檢驗
-            string LwDateS = sDateE.pToDateTime().AddDays(-31).pRyyymmdd();
+            string LwDateS = sDateE.pToDateTime().AddDays(-LabLookbackDays).pRyyymmdd();
             string LwDateE = sDateE;
 
             // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
