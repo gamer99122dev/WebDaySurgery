@@ -138,8 +138,11 @@ namespace WebDaySurgery.Controllers
         // 純說明頁，沒有查詢條件。項目清單直接給判定時用的同一份設定，
         // 以後改 LabChkTeams／ExamChks，說明頁跟著變，不用記得回來改文件
         [HttpGet]
-        public IActionResult PatientListHelp()
+        public IActionResult PatientListHelp(DateTime? ResvDate)
         {
+            // 只是為了「回查詢病人清單」和導覽列能帶回原本那天，說明內容不看日期
+            ViewBag.ResvDate = ResvDate;
+
             ViewBag.LabChkTeams = LabChkTeams;
             ViewBag.ExamChks = ExamChks;
             ViewBag.BloodPrepOrdNo = BloodPrepOrdNo;

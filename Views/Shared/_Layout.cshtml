@@ -24,7 +24,9 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="DaySurgery" asp-action="BedBooking">預定床位</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="DaySurgery" asp-action="PatientList">查詢病人清單</a>
+                            @* 從清單／報告頁按回來要停在原本那天，不能默默跳回今天；ViewBag.ResvDate 沒設的頁帶空字串，路由會省略，就是今天 *@
+                            <a class="nav-link text-dark" asp-area="" asp-controller="DaySurgery" asp-action="PatientList"
+                               asp-route-ResvDate="@(ViewBag.ResvDate is DateTime navDate ? navDate.ToString("yyyy-MM-dd") : "")">查詢病人清單</a>
                         </li>
                     </ul>
                 </div>

@@ -10,7 +10,7 @@
         : $"病歷號 {mrNo}　{DateTime.Today:yyyy/MM/dd} 起三個月內的預約";
 }
 
-<h1>@ViewData["Title"] <a asp-action="PatientListHelp" class="fs-6 align-middle">欄位說明</a></h1>
+<h1>@ViewData["Title"] <a asp-action="PatientListHelp" asp-route-ResvDate="@resvDate.ToString("yyyy-MM-dd")" class="fs-6 align-middle">欄位說明</a></h1>
 <partial name="_TestEnv" />
 
 @* 兩個獨立查詢，各自一個 form。條碼槍刷病歷號等於打完數字再按 Enter，分開才不會誤送日期那張 *@
@@ -35,6 +35,8 @@
 
     @* 例外查詢：直接找特定某個人 *@
     <form method="post" asp-action="PatientListSearch">
+        @* 日期要跟著帶，空白按「查病歷號」或掃錯條碼才會停在原本那天，不會默默跳回今天 *@
+        <input type="hidden" name="ResvDate" value="@resvDate.ToString("yyyy-MM-dd")" />
         <label for="ChartNo" class="form-label">病歷號</label>
         <div class="d-flex gap-2">
             <input type="text" id="ChartNo" name="ChartNo" class="form-control" style="width: 9rem;"

@@ -15,7 +15,8 @@
     以下說明每個符號的意思、系統看的是哪些項目、以及往前追多久的資料。
 </p>
 
-<p><a asp-action="PatientList">‹ 回查詢病人清單</a></p>
+@* 帶回進來時那天，不然會跳回今天 *@
+<p><a asp-action="PatientList" asp-route-ResvDate="@(ViewBag.ResvDate is DateTime backDate ? backDate.ToString("yyyy-MM-dd") : "")">‹ 回查詢病人清單</a></p>
 
 <h2 class="h4 mt-4">符號對照</h2>
 
