@@ -8,6 +8,9 @@
 <h1>@ViewData["Title"]</h1>
 <partial name="_TestEnv" />
 
+@* 高齡者靠頁面上的回鈕，不靠瀏覽器上一頁；帶回原本那天，病歷號模式靠 TempData.Peek 留著 *@
+<p><a asp-action="PatientList" asp-route-ResvDate="@resvDate.ToString("yyyy-MM-dd")">‹ 回病人清單</a></p>
+
 @* 表頭跟檢驗資料頁同一個排法，上排身分、下排本次手術 *@
 <div class="border rounded bg-light p-3 mb-3">
     <div class="d-flex flex-wrap align-items-baseline gap-3">
