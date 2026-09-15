@@ -15,11 +15,11 @@
 <form method="get" id="queryForm">
     <div class="row g-2 align-items-end" style="max-width: 32rem;">
         <div class="col-auto">
-            <label for="DateS" class="form-label">起</label>
+            <label for="DateS" class="form-label">起 (西元)</label>
             <input type="date" id="DateS" name="DateS" class="form-control" value="@dateS.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-auto">
-            <label for="DateE" class="form-label">迄</label>
+            <label for="DateE" class="form-label">迄 (西元)</label>
             <input type="date" id="DateE" name="DateE" class="form-control" value="@dateE.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-auto">
@@ -34,6 +34,9 @@
     </div>
 </form>
 
+@* 選週六當起日會覺得「我的日期呢」，要先講 *@
+<p class="text-muted mt-3 mb-0">週六、日不排刀，表上不顯示。</p>
+
 <table class="table table-bordered align-middle mt-3 bed-table">
     <tbody>
         @for (DateTime d = dateS; d <= dateE; d = d.AddDays(1))
@@ -46,7 +49,7 @@
 
             <tr>
                 @* 加括號隔開，否則 Razor 會把後面的 (...) 當成方法呼叫 *@
-                <th class="bed-date @(d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday ? "bed-weekend" : "")">@(d.ToString("yyyy/MM/dd"))<span class="bed-week">(@d.pToDayOfWeekCh())</span></th>
+                <th class="bed-date @(d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday ? "bed-weekend" : "")">@(d.ToString("yyyy/MM/dd"))<span class="bed-week">(@d.pToDayOfWeekCh())</span>@if (d == DateTime.Today) { <span class="bed-today">今天</span> }</th>
                 @for (int i = 0; i < BedsPerDay; i++)
                 {
                     if (i < booked.Count)
@@ -112,6 +115,9 @@
 
     .bed-week { color: #495057; margin-left: .25rem; }
     .bed-weekend, .bed-weekend .bed-week { color: #c92a2a; }
+
+    /* 今天那列要一眼找到；用字不只靠底色，藍色跟科別標同一組 */
+    .bed-today { display: inline-block; margin-left: .5rem; padding: .05rem .45rem; border-radius: .25rem; background-color: #1864ab; color: #fff; font-size: .95rem; font-weight: 600; }
 
     .bed-slot { height: 5.5rem; text-align: center; vertical-align: middle; }
 
