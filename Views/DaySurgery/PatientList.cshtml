@@ -64,6 +64,7 @@
                 <th>檢查</th>
                 <th>備血</th>
                 <th>麻醉紀錄</th>
+                <th>術後床號</th>
             </tr>
         </thead>
         <tbody>
@@ -85,7 +86,17 @@
                     </td>
                     <td class="text-nowrap">@Sec[r.SecNo]</td>
                     <td class="text-nowrap">@r.DrName</td>
-                    <td class="text-nowrap">@(r.OpSch == "" ? "—" : r.OpSch)</td>
+                    @* 日期、時間各佔一行，置中 *@
+                    <td class="text-nowrap text-center">
+                        @if (r.OpSch == "")
+                        {
+                            @: —
+                        }
+                        @foreach (string part in r.OpSch.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            <div>@part</div>
+                        }
+                    </td>
                     @* 術式名稱動輒上百字，這欄不能 nowrap，會把整張表撐開 *@
                     <td>@(r.OpName == "" ? "—" : r.OpName)</td>
                     @* 一項一行。符號本身就分得出來，不是只靠顏色 *@
@@ -138,6 +149,8 @@
                             <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">門診評估單</button>
                         </form>
                     </td>
+                    @* 術後床號：只先開欄位，資料來源還沒定，先一律顯示 — *@
+                    <td class="text-nowrap">—</td>
                 </tr>
             }
         </tbody>
