@@ -106,7 +106,8 @@ namespace WebDaySurgery.Controllers
             }
             else
             {
-                TempData[TempChartNo] = mrNo;
+                // 打 123 就是要查 0000000123；放後端補，掃條碼／打字／Enter／按鈕都走這一條，不用 JS
+                TempData[TempChartNo] = mrNo.PadLeft(10, '0');
             }
 
             // 日期不算敏感資料，帶在網址上，上一頁／下一頁才回得到原本那天
