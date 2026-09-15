@@ -678,27 +678,22 @@ namespace WebDaySurgery.Controllers
             }
 
             //手術排程、術式
-            SQL = "\n select ";
-            SQL += "\n b.OROrdName1 as '術式一', ORSchDate, ORSchTime, a.chRsMrNo, a.chRsPName, a.chRsPDate ";
-            SQL += "\n from DB_ADM..AdmResvTbl a ";
-            SQL += "\n join DB_MIDDLE..JAG_OR_opsche_chr_basic b ";
-            SQL += "\n on ";
-            SQL += "\n a.chRsPDate2 = b.RegDate and a.chRsPTime = b.RegTime and a.chRsPRoom = b.RegRoom and a.chRsPNo = b.RegNo";
+            // 跟 QueryResv 同一個來源：HIS 自己的手術排程 (AdmORSchTbl)，病歷號＋手術日就對得上預約
+            SQL = "\n select chOrOrd1EName, chOrDate, chOrTime, chOrMrNo ";
+            SQL += "\n from DB_ADM..AdmORSchTbl ";
             SQL += "\n where ";
-            SQL += $"\n a.chRsMrNo = '{sMrNo}' ";
-            SQL += $"\n and a.chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
-            SQL += "\n and isnull(b.OROrdName1,'' ) <> '' ";
-
-            DataTable dtJAG = _db.executesqldt(SQL);
+            SQL += $"\n chOrMrNo = '{sMrNo}' ";
+            SQL += $"\n and chOrDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            DataTable dtSch = _db.executesqldt(SQL);
 
             // 這裡的區間橫跨三個月，同一個人本來就會有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
             Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
 
             // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
-            foreach (DataRow i in dtJAG.AsEnumerable())
+            foreach (DataRow i in dtSch.AsEnumerable())
             {
-                schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
+                schs[$"{i.pCol("chOrMrNo")}|{i.pCol("chOrDate")}"] = i;
             }
 
             // 查的就是同一個人，每一列的病歷號都一樣，判定時當 key 用
@@ -783,8 +778,8 @@ namespace WebDaySurgery.Controllers
                     PDate = r.pCol("chRsPDate"),
 
                     // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
-                    OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
-                    OpName = sch?.pCol("術式一") ?? "",
+                    OpSch = sch == null ? "" : $"{(sch.pCol("chOrDate") + sch.pCol("chOrTime")).pToDateTime():yyyy/MM/dd HH:mm}",
+                    OpName = sch?.pCol("chOrOrd1EName") ?? "",
 
                     // 每一列照自己的住院日算，key 就是從這批資料撈出來的，一定找得到
                     Labs = labChks[r.pCol("chRsPDate")],
@@ -883,28 +878,23 @@ namespace WebDaySurgery.Controllers
             }
 
             //手術排程、術式
-            SQL = "\n select ";
-            SQL += "\n b.OROrdName1 as '術式一', ORSchDate, ORSchTime, a.chRsMrNo, a.chRsPName, a.chRsPDate ";
-            SQL += "\n from DB_ADM..AdmResvTbl a ";
-            SQL += "\n join DB_MIDDLE..JAG_OR_opsche_chr_basic b ";
-            SQL += "\n on ";
-            SQL += "\n a.chRsPDate2 = b.RegDate and a.chRsPTime = b.RegTime and a.chRsPRoom = b.RegRoom and a.chRsPNo = b.RegNo";
+            // 改看 HIS 自己的手術排程 (AdmORSchTbl)，病歷號＋手術日就對得上預約，不用再經 DB_MIDDLE 的 JAG 表。
+            // 這批人、這段日期寬撈回來，跟預約的對應留在下面的字典做
+            SQL = "\n select chOrOrd1EName, chOrDate, chOrTime, chOrMrNo ";
+            SQL += "\n from DB_ADM..AdmORSchTbl ";
             SQL += "\n where ";
-            SQL += $"\n a.chRsMrNo in  ({MrList.pJoinWithQuote()}) ";
-            SQL += $"\n and a.chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
-            SQL += "\n and isnull(b.OROrdName1,'' ) <> '' ";
-            SQL += "\n ";
-            SQL += "\n ";
-            DataTable dtJAG = _db.executesqldt(SQL);
+            SQL += $"\n chOrMrNo in ({MrList.pJoinWithQuote()}) ";
+            SQL += $"\n and chOrDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            DataTable dtSch = _db.executesqldt(SQL);
 
             // BedBooking 一次查三天，同一個病歷號可能有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
             Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
 
             // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
-            foreach (DataRow i in dtJAG.AsEnumerable())
+            foreach (DataRow i in dtSch.AsEnumerable())
             {
-                schs[$"{i.pCol("chRsMrNo")}|{i.pCol("chRsPDate")}"] = i;
+                schs[$"{i.pCol("chOrMrNo")}|{i.pCol("chOrDate")}"] = i;
             }
 
             // 檢驗的 SQL 只挑畫面看的那幾類，類別代碼從同一份設定湊出來
@@ -967,8 +957,8 @@ namespace WebDaySurgery.Controllers
                     PDate = r.pCol("chRsPDate"),
 
                     // 民國日期 1150812 接上時間 1300 剛好是 pToDateTime 吃的 11 碼
-                    OpSch = sch == null ? "" : $"{(sch.pCol("ORSchDate") + sch.pCol("ORSchTime")).pToDateTime():yyyy/MM/dd HH:mm}",
-                    OpName = sch?.pCol("術式一") ?? "",
+                    OpSch = sch == null ? "" : $"{(sch.pCol("chOrDate") + sch.pCol("chOrTime")).pToDateTime():yyyy/MM/dd HH:mm}",
+                    OpName = sch?.pCol("chOrOrd1EName") ?? "",
 
                     // MrList 就是從這批資料撈出來的，一定找得到
                     Labs = labChks[r.pCol("chRsMrNo")],
