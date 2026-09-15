@@ -126,6 +126,10 @@
                     <td class="text-nowrap">@(r.LReqNo.pLeft(2) == "80" ? "四方" : "山東")</td>
                 </tr>
             }
+            @* 空表會被當成還在載入或壞掉。列是固定的，訊息在這裡就定好：一筆都沒有 vs 有資料但類別全被取消勾選；顯不顯示由 apply() 決定 *@
+            <tr id="labEmpty" hidden>
+                <td colspan="11" class="text-center py-4">@(labs.Count == 0 ? "手術日往前 14 天內沒有檢驗報告" : "類別全部取消勾選了，請勾選要看的類別")</td>
+            </tr>
         </tbody>
     </table>
 </div>
@@ -134,7 +138,7 @@
 <script>
     // 資料整份都在畫面上了，篩選就是藏列，不用回後端重查
     const boxes = [...document.querySelectorAll('#labFilter input[type="checkbox"]')];
-    const rows = [...document.querySelectorAll('tbody tr')];
+    const rows = [...document.querySelectorAll('tbody tr[data-team]')];   // 只算資料列，最後那列空表訊息不算
     const known = new Set(boxes.map(b => b.value).filter(v => v !== '*'));
 
     // 藏完列之後，每組的第一列會換人，類別／檢體／日期要重新算一次貼在哪一列
@@ -163,7 +167,9 @@
             tr.hidden = !(picked.has(team) || (other && !known.has(team)));
         });
 
-        document.getElementById('labCount').textContent = rows.filter(tr => !tr.hidden).length;
+        const shown = rows.filter(tr => !tr.hidden).length;
+        document.getElementById('labCount').textContent = shown;
+        document.getElementById('labEmpty').hidden = shown > 0;
         regroup();
     }
 

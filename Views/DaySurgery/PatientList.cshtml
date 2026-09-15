@@ -4,10 +4,16 @@
     DateTime resvDate = ViewBag.ResvDate;
     string mrNo = ViewBag.MrNo;
     List<Resv> patients = ViewBag.Patients;
+    bool mrNoFound = ViewBag.MrNoFound;
 
     string listTitle = mrNo == ""
         ? $"{resvDate:yyyy/MM/dd} ({resvDate.pToDayOfWeekCh()}) 病患清單"
         : $"病歷號 {mrNo}　{DateTime.Today:yyyy/MM/dd} 起三個月內的預約";
+
+    // 空表會被當成還在載入或壞掉，要明講；病歷號打錯一位數也是 0 筆，不能讓人以為是沒排刀
+    string emptyMsg = mrNo == "" ? "這一天沒有預定住院手術的病人"
+        : mrNoFound ? $"病歷號 {mrNo} 三個月內沒有預約"
+        : $"查無病歷號 {mrNo}，請確認號碼是否正確";
 }
 
 <h1>@ViewData["Title"] <a asp-action="PatientListHelp" asp-route-ResvDate="@resvDate.ToString("yyyy-MM-dd")" class="fs-6 align-middle">欄位說明</a></h1>
@@ -169,6 +175,10 @@
                     @* 術後床號：只先開欄位，資料來源還沒定，先一律顯示 — *@
                     <td class="text-nowrap">—</td>
                 </tr>
+            }
+            @if (patients.Count == 0)
+            {
+                <tr><td colspan="14" class="text-center py-4">@emptyMsg</td></tr>
             }
         </tbody>
     </table>

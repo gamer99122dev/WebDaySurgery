@@ -127,9 +127,13 @@ namespace WebDaySurgery.Controllers
             ViewBag.MrNo = mrNo;
 
             // 查病歷號不看日期框，一律當天起算三個月內的預約，找的是「這個人接下來要開的刀」
-            ViewBag.Patients = mrNo == ""
+            List<Resv> patients = mrNo == ""
                 ? QueryResv(resvDate, resvDate)
                 : QueryResvByMrNo(mrNo, DateTime.Today, DateTime.Today.AddMonths(3));
+            ViewBag.Patients = patients;
+
+            // 查病歷號 0 筆要分「打錯號碼」和「有這個人但沒排刀」：打錯被當成沒排刀就危險了。有結果就不用多查
+            ViewBag.MrNoFound = mrNo == "" || patients.Count > 0 || QueryPatientBasic(mrNo).Found;
 
             return View();
         }
@@ -180,7 +184,7 @@ namespace WebDaySurgery.Controllers
             ViewBag.Patient = patient;
 
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
-            (string birthday, string sex) = QueryPatientBasic(mrNo);
+            (string birthday, string sex, _) = QueryPatientBasic(mrNo);
 
             // 術前檢驗抓手術日往前 LabLookbackDays 天
             List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-LabLookbackDays), ResvDate.Value);
@@ -239,9 +243,9 @@ namespace WebDaySurgery.Controllers
         }
 
         /// <summary>
-        /// 查病歷號的生日與性別，算 eGFR 用；查不到回兩個空字串
+        /// 查病歷號的生日與性別，算 eGFR 用；Found 是這個病歷號存不存在，查不到回兩個空字串＋false
         /// </summary>
-        private (string Birthday, string Sex) QueryPatientBasic(string MrNo)
+        private (string Birthday, string Sex, bool Found) QueryPatientBasic(string MrNo)
         {
             string SQL = "SELECT chBirthday, chSex ";
             SQL += $"\n FROM DB_OPD..OpdMRBasicTbl ";
@@ -250,8 +254,8 @@ namespace WebDaySurgery.Controllers
 
             DataTable dt = _db.executesqldt(SQL);
 
-            // 只有兩個欄位、也只有這裡用，不值得為它開一個類別
-            return dt.Rows.Count == 0 ? ("", "") : (dt.Rows[0].pCol("chBirthday"), dt.Rows[0].pCol("chSex"));
+            // 只有幾個欄位、也只有兩個地方用，不值得為它開一個類別
+            return dt.Rows.Count == 0 ? ("", "", false) : (dt.Rows[0].pCol("chBirthday"), dt.Rows[0].pCol("chSex"), true);
         }
 
         /// <summary>
