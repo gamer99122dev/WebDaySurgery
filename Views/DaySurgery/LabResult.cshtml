@@ -55,6 +55,7 @@
 
 @* 預設全勾＝全部顯示，要看什麼再取消掉其他的。「其他」是類別不在上面清單裡的列 (尿液、血清免疫、特殊生化…) *@
 <div id="labFilter" class="d-flex flex-wrap align-items-center gap-3 border rounded p-3 mb-3">
+    <span class="fw-semibold">顯示類別：</span>
     <div class="btn-group">
         <button type="button" id="labAll" class="btn btn-outline-secondary">全部選取</button>
         <button type="button" id="labNone" class="btn btn-outline-secondary">取消全部選取</button>
@@ -110,7 +111,7 @@
                 string appDTM = r.AppDTM.pLeft(11).pSyyymmddhhmm();
 
                 @* data-v 是這一列原本的值：篩選藏列後群組的第一列會換人，JS 要靠它重算哪幾格該顯示 *@
-                <tr data-team="@r.TeamNo" data-lreq="@r.LReqNo" data-vf="@r.VfDTM">
+                <tr class="@(newSpeci ? "lab-group-start" : "")" data-team="@r.TeamNo" data-lreq="@r.LReqNo" data-vf="@r.VfDTM">
                     <td class="text-nowrap" data-v="@r.TeamNam">@(newSpeci ? r.TeamNam : "")</td>
                     <td class="text-nowrap" data-v="@r.Speci">@(newSpeci ? r.Speci : "")</td>
                     <td class="text-nowrap" data-v="@vfDTM">@(newVfDTM ? vfDTM : "")</td>
@@ -134,6 +135,11 @@
     </table>
 </div>
 
+<style>
+    /* 群組第一列上緣加粗線：類別／檢體／日期只印在第一列，中間列四格空白，沒分隔線會被當成缺資料、也看不出屬於哪一組 */
+    .lab-group-start td { border-top: 3px solid #adb5bd; }
+</style>
+
 @section Scripts {
 <script>
     // 資料整份都在畫面上了，篩選就是藏列，不用回後端重查
@@ -150,6 +156,7 @@
             const newVf = newSpeci || tr.dataset.vf !== prevVf;
             prevLReq = tr.dataset.lreq;
             prevVf = tr.dataset.vf;
+            tr.classList.toggle('lab-group-start', newSpeci);   // 群組分隔線跟著第一列走
 
             // 前四格依序是 類別／檢體／報告日期／修改時間，只有報告日期是看 newVf
             [newSpeci, newSpeci, newVf, newSpeci].forEach((show, i) => {
