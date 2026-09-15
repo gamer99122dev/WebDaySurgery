@@ -243,6 +243,10 @@ namespace WebDaySurgery.Controllers
             return url.StartsWith("http") ? Redirect(url) : Content(url);
         }
 
+        // 錯誤頁。由 Program.cs 的 UseExceptionHandler 導過來，只在非 Development 生效；
+        // 不掛 [HttpGet]，POST 出錯時是用 POST 重跑到這裡的
+        public IActionResult Error() => View();
+
         /// <summary>
         /// 查病歷號的生日與性別，算 eGFR 用；Found 是這個病歷號存不存在，查不到回兩個空字串＋false
         /// </summary>

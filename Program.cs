@@ -23,6 +23,8 @@ app.LogDbTarget();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
+    // 沒攔例外的話正式站回一張空白 500，Chrome 顯示自己的「HTTP ERROR 500」，高齡者會以為電腦壞了
+    app.UseExceptionHandler("/DaySurgery/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
