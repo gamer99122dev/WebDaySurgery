@@ -71,16 +71,9 @@
             {
                 DateTime pDate = r.PDate.pToDateTime();
 
-                <tr style="cursor: pointer;">
+                <tr>
                     <td class="text-nowrap">@pDate.ToString("yyyy/MM/dd")</td>
-                    @* 姓名做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
-                    @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
-                    <td class="text-nowrap">
-                        <form method="post" asp-action="LabResultSearch">
-                            <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@r.PName</button>
-                        </form>
-                    </td>
+                    <td class="text-nowrap">@r.PName</td>
                     <td class="text-nowrap">@r.MrNo</td>
                     <td>@r.Sex.pMapValue("1", "男", "0", "女")</td>
                     @* 兩支電話各佔一行，只有一支就不會多出空行 *@
@@ -101,13 +94,19 @@
                         {
                             @: —
                         }
-                        @foreach (ChkItem c in r.Labs)
-                        {
-                            <div>
-                                @c.Nam
-                                <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
-                            </div>
-                        }
+                        @* 檢驗資料頁一次看全部類別，點哪一類都進同一頁，三顆按鈕共用一張 form *@
+                        @* 做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
+                        @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
+                        <form method="post" asp-action="LabResultSearch">
+                            <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
+                            @foreach (ChkItem c in r.Labs)
+                            {
+                                <div>
+                                    <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@c.Nam</button>
+                                    <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
+                                </div>
+                            }
+                        </form>
                     </td>
                     <td class="text-nowrap">
                         @if (r.Exams.Count == 0)
@@ -150,12 +149,3 @@
         </tbody>
     </table>
 </div>
-
-@section Scripts {
-<script>
-    // 點整列＝點該列姓名那顆按鈕。列內本來就有連結或按鈕的，讓它做自己的事，不要被整列點擊蓋掉
-    document.querySelectorAll('#patientTable tbody tr').forEach(tr => tr.addEventListener('click', e => {
-        if (!e.target.closest('a, button')) tr.querySelector('button[name="MrNo"]').click();
-    }));
-</script>
-}
