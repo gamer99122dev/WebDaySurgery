@@ -188,19 +188,20 @@ namespace WebDaySurgery.Controllers
         }
 
         // 階段一 (3) 檢查報告 (選人)
-        // 跟檢驗資料同一套：病歷號走 POST body 不進網址，檢查項目 (CXR/KUB/EKG) 不敏感，跟日期一起帶在網址上
+        // 跟檢驗資料同一套：病歷號走 POST body 不進網址，只有日期帶在網址上
         [HttpPost]
-        public IActionResult ExamResultSearch(string MrNo, DateTime ResvDate, string Nam)
+        public IActionResult ExamResultSearch(string MrNo, DateTime ResvDate)
         {
             TempData[TempMrNo] = MrNo.pNullOrTrim();
 
-            return RedirectToAction(nameof(ExamResult), new { ResvDate = ResvDate.ToString("yyyy-MM-dd"), Nam });
+            return RedirectToAction(nameof(ExamResult), new { ResvDate = ResvDate.ToString("yyyy-MM-dd") });
         }
 
         // 階段一 (3) 檢查報告 (畫面)
+        // CXR／KUB／EKG 三項同一頁，沒開單的那項顯示無結果；三項的開單狀況清單已經算好，直接用 patient.Exams
         // ponytail: 目前只畫表頭，報告內容等資料來源確定再補
         [HttpGet]
-        public IActionResult ExamResult(DateTime? ResvDate, string? Nam)
+        public IActionResult ExamResult(DateTime? ResvDate)
         {
             // Peek 不會把值消掉，重新整理還是同一個病人
             string mrNo = TempData.Peek(TempMrNo) as string ?? "";
@@ -216,7 +217,6 @@ namespace WebDaySurgery.Controllers
 
             ViewBag.ResvDate = ResvDate.Value;
             ViewBag.Patient = patient;
-            ViewBag.Nam = Nam.pNullOrTrim();
 
             return View();
         }
