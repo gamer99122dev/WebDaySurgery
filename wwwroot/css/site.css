@@ -12,6 +12,11 @@ html {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+/* 滿版會貼到螢幕邊，高齡者視線要從最左掃到最右；主內容與頁尾兩側各留 5%，寬窄螢幕都成比例。要再縮或放寬改這個數字 */
+body > .container-fluid, .footer > .container-fluid {
+  padding-inline: 5%;
+}
+
 html {
   position: relative;
   min-height: 100%;
