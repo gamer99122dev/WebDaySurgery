@@ -684,13 +684,17 @@ namespace WebDaySurgery.Controllers
             SQL += "\n where ";
             SQL += $"\n chOrMrNo = '{sMrNo}' ";
             SQL += $"\n and chOrDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            // chOrStat 0 取消排程、1 排程確認、2 確認後修改；取消的不算排到刀
+            SQL += "\n and chOrStat <> '0' ";
+            // 主鍵是 chOrMrNo + chOrCDate (建檔時間 13 碼)，照它排，下面字典留到最後的就是最新登錄那筆
+            SQL += "\n order by chOrCDate ";
             DataTable dtSch = _db.executesqldt(SQL);
 
             // 這裡的區間橫跨三個月，同一個人本來就會有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
             Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
 
-            // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
+            // 同一人同一天常有好幾筆 (多半是改時段重新登錄)，只留最新登錄的那筆，畫面一列也只放得下一台
             foreach (DataRow i in dtSch.AsEnumerable())
             {
                 schs[$"{i.pCol("chOrMrNo")}|{i.pCol("chOrDate")}"] = i;
@@ -885,13 +889,17 @@ namespace WebDaySurgery.Controllers
             SQL += "\n where ";
             SQL += $"\n chOrMrNo in ({MrList.pJoinWithQuote()}) ";
             SQL += $"\n and chOrDate BETWEEN '{sDateS}' AND '{sDateE}' ";
+            // chOrStat 0 取消排程、1 排程確認、2 確認後修改；取消的不算排到刀
+            SQL += "\n and chOrStat <> '0' ";
+            // 主鍵是 chOrMrNo + chOrCDate (建檔時間 13 碼)，照它排，下面字典留到最後的就是最新登錄那筆
+            SQL += "\n order by chOrCDate ";
             DataTable dtSch = _db.executesqldt(SQL);
 
             // BedBooking 一次查三天，同一個病歷號可能有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
             Dictionary<string, DataRow> schs = new Dictionary<string, DataRow>();
 
-            // 同一筆預約排到兩台刀的話這裡只留最後一筆，畫面一列也只放得下一台
+            // 同一人同一天常有好幾筆 (多半是改時段重新登錄)，只留最新登錄的那筆，畫面一列也只放得下一台
             foreach (DataRow i in dtSch.AsEnumerable())
             {
                 schs[$"{i.pCol("chOrMrNo")}|{i.pCol("chOrDate")}"] = i;
