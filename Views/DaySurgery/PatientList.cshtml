@@ -16,12 +16,15 @@
 @* 兩個獨立查詢，各自一個 form。條碼槍刷病歷號等於打完數字再按 Enter，分開才不會誤送日期那張 *@
 <div class="d-flex flex-wrap align-items-end gap-4">
 
-    @* 主動線：看某一天的手術名單。改日期就直接查，不用再按一次按鈕 *@
+    @* 主動線：看某一天的手術名單。
+       不用 onchange 自動送出：Chrome 的 date input 用鍵盤打年份時每個數字都會觸發 change，打到一半就查出去了。
+       「查詢」要放在前一日／後一日前面，Enter 才會落在它身上，不會變成前一日 *@
     <form method="post" asp-action="PatientListSearch">
         <label for="ResvDate" class="form-label">手術日期 (西元)</label>
         <div class="d-flex gap-2">
             <input type="date" id="ResvDate" name="ResvDate" class="form-control" style="width: 10rem;"
-                   value="@resvDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+                   value="@resvDate.ToString("yyyy-MM-dd")" />
+            <button type="submit" class="btn btn-primary">查詢</button>
             <div class="btn-group">
                 <button type="submit" name="Nav" value="prev" class="btn btn-outline-secondary">‹ 前一日</button>
                 <button type="submit" name="Nav" value="today" class="btn btn-outline-secondary">今日</button>
