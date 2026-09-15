@@ -51,10 +51,18 @@
                 {
                     if (i < booked.Count)
                     {
+                        @* 最後一格把第 4 筆以後全部疊進去：床位只有 4 個，但預約系統擋不住超額，超額的預約不能因此消失，要讓人看到 *@
+                        int last = i == BedsPerDay - 1 ? booked.Count : i + 1;
                         <td class="bed-slot bed-booked">
-                            <div class="bed-sec">@Sec[booked[i].SecNo]</div>
-                            <div class="bed-dr">@booked[i].DrName</div>
-                            <div class="bed-pat">@booked[i].MrNo @booked[i].PName</div>
+                            @for (int j = i; j < last; j++)
+                            {
+                                <div class="@(j > i ? "bed-over" : "")">
+                                    @if (j > i) { <div class="bed-over-label">超出床位</div> }
+                                    <div class="bed-sec">@Sec[booked[j].SecNo]</div>
+                                    <div class="bed-dr">@booked[j].DrName</div>
+                                    <div class="bed-pat">@booked[j].MrNo @booked[j].PName</div>
+                                </div>
+                            }
                         </td>
                     }
                     else
@@ -133,6 +141,10 @@
 
     /* 病歷號＋姓名是次要資訊，字級比醫師小一階 */
     .bed-pat { font-size: 1rem; color: #343a40; font-variant-numeric: tabular-nums; }
+
+    /* 超額預約疊在第 4 格下面：紅色虛線＋字，不只靠顏色 */
+    .bed-over { margin-top: .5rem; padding-top: .5rem; border-top: 2px dashed #c92a2a; }
+    .bed-over-label { font-size: .9rem; font-weight: 600; color: #c92a2a; }
 </style>
 
 @section Scripts {
