@@ -94,18 +94,19 @@
                         {
                             @: —
                         }
-                        @* 檢驗資料頁一次看全部類別，點哪一類都進同一頁，三顆按鈕共用一張 form *@
+                        @foreach (ChkItem c in r.Labs)
+                        {
+                            <div>
+                                @c.Nam
+                                <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
+                            </div>
+                        }
+                        @* 檢驗資料頁一次看全部類別，一格只放一個入口；三行都做成連結會讓人以為點哪一類看哪一類 *@
                         @* 做成真的按鈕，鍵盤 Tab + Enter 也能進去，不是只有滑鼠點得到 *@
                         @* 查病歷號時每列的手術日期都不一樣，form 只能一列一張，不能整張表共用 *@
-                        <form method="post" asp-action="LabResultSearch">
+                        <form method="post" asp-action="LabResultSearch" class="mt-1">
                             <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                            @foreach (ChkItem c in r.Labs)
-                            {
-                                <div>
-                                    <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@c.Nam</button>
-                                    <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
-                                </div>
-                            }
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">檢驗資料</button>
                         </form>
                     </td>
                     <td class="text-nowrap">
@@ -113,16 +114,17 @@
                         {
                             @: —
                         }
-                        @* 跟檢驗欄一樣：三項同一頁，沒開單的那項頁上會寫無結果，所以三顆都做成按鈕、共用一張 form *@
-                        <form method="post" asp-action="ExamResultSearch">
+                        @foreach (ChkItem c in r.Exams)
+                        {
+                            <div>
+                                @c.Nam
+                                <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
+                            </div>
+                        }
+                        @* 跟檢驗欄一樣：三項同一頁、一格一個入口，沒開單的那項頁上會寫無結果，所以不用擋 *@
+                        <form method="post" asp-action="ExamResultSearch" class="mt-1">
                             <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                            @foreach (ChkItem c in r.Exams)
-                            {
-                                <div>
-                                    <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">@c.Nam</button>
-                                    <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
-                                </div>
-                            }
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">檢查報告</button>
                         </form>
                     </td>
                     @* 只有一項醫令，開了就是 ✓，沒開就是 ✗ *@
@@ -133,7 +135,7 @@
                     <td class="text-nowrap">
                         <form method="post" asp-action="AnesRecord" target="_blank">
                             <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-link p-0 align-baseline">門診評估單</button>
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">門診評估單</button>
                         </form>
                     </td>
                 </tr>
