@@ -136,7 +136,7 @@
                         {
                             <form method="post" asp-action="LabResultSearch" class="mt-1">
                                 <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                                <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">檢驗報告</button>
+                                <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary">檢驗報告</button>
                             </form>
                         }
                     </td>
@@ -157,7 +157,7 @@
                         {
                             <form method="post" asp-action="ExamResultSearch" class="mt-1">
                                 <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                                <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">檢查報告</button>
+                                <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary">檢查報告</button>
                             </form>
                         }
                     </td>
@@ -169,7 +169,7 @@
                     <td class="text-nowrap">
                         <form method="post" asp-action="AnesRecord" target="_blank">
                             <input type="hidden" name="ResvDate" value="@pDate.ToString("yyyy-MM-dd")" />
-                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary btn-sm">門診評估單</button>
+                            <button type="submit" name="MrNo" value="@r.MrNo" class="btn btn-outline-primary">門診評估單</button>
                         </form>
                     </td>
                     @* 術後床號：只先開欄位，資料來源還沒定，先一律顯示 — *@

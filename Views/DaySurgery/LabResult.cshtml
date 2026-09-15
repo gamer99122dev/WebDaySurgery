@@ -55,7 +55,7 @@
 
 @* 預設全勾＝全部顯示，要看什麼再取消掉其他的。「其他」是類別不在上面清單裡的列 (尿液、血清免疫、特殊生化…) *@
 <div id="labFilter" class="d-flex flex-wrap align-items-center gap-3 border rounded p-3 mb-3">
-    <div class="btn-group btn-group-sm">
+    <div class="btn-group">
         <button type="button" id="labAll" class="btn btn-outline-secondary">全部選取</button>
         <button type="button" id="labNone" class="btn btn-outline-secondary">取消全部選取</button>
     </div>
@@ -63,7 +63,7 @@
     @foreach ((string No, string Name) in labTeams)
     {
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="team-@No" value="@No" checked />
+            <input type="checkbox" class="form-check-input" style="width: 1.25em; height: 1.25em;" id="team-@No" value="@No" checked />
             <label class="form-check-label text-nowrap" for="team-@No">@Name</label>
         </div>
     }
