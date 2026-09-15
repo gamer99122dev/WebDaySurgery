@@ -152,7 +152,7 @@
                                 <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
                             </div>
                         }
-                        @* 跟檢驗欄一樣：三項同一頁、一格一個入口；有開單的那項頁上才有東西，沒開的會寫無結果 *@
+                        @* 跟檢驗欄一樣：三項同一頁、一格一個入口；有開單的那項頁上才有東西，沒開的會寫未開單 *@
                         @if (anyExam)
                         {
                             <form method="post" asp-action="ExamResultSearch" class="mt-1">
