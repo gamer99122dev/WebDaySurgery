@@ -4,6 +4,7 @@
     DateTime resvDate = ViewBag.ResvDate;
     Resv patient = ViewBag.Patient;
     List<Ekg> ekgs = ViewBag.Ekgs;
+    List<Cxr> cxrs = ViewBag.Cxrs;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -75,10 +76,56 @@
                     </tbody>
                 </table>
             }
+            else if (c.Nam == "CXR" && cxrs.Count > 0)
+            {
+                @* 一張單一個區塊：表頭排成有格線的表格，順序照門診放射報告畫面：放射名稱一整列，
+                   之後「時間在左、人在右」兩兩一列；下面 Report／Impression 兩段文字。高齡者靠格線和粗體標題找欄位，不用小灰字 *@
+                <div class="vstack gap-3">
+                    @foreach (Cxr x in cxrs)
+                    {
+                        @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位；轉不出來會是空字串，統一顯示 - *@
+                        (string Label, string Val)[] heads = new[]
+                        {
+                            ("申請時間", x.AppDTM.pLeft(11).pSyyymmddhhmm()), ("申請醫師", x.AppNm),
+                            ("照片時間", x.RcpDTM.pLeft(11).pSyyymmddhhmm()), ("放射師", x.Tec1),
+                            ("報告時間", x.VerDTM.pLeft(11).pSyyymmddhhmm()), ("報告醫師", x.VerNm),
+                            ("修改時間", x.ModDTM.pLeft(11).pSyyymmddhhmm()), ("修改版本", x.ModTM),
+                        };
+                        <div class="border rounded p-3">
+                            <table class="table table-bordered align-middle mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th class="table-light text-nowrap" style="width: 12%;">放射名稱</th>
+                                        <td colspan="3">@(x.OrdNam == "" ? "-" : x.OrdNam)</td>
+                                    </tr>
+                                    @for (int i = 0; i < heads.Length; i += 2)
+                                    {
+                                        <tr>
+                                            <th class="table-light text-nowrap" style="width: 12%;">@heads[i].Label</th>
+                                            <td style="width: 38%;">@(heads[i].Val == "" ? "-" : heads[i].Val)</td>
+                                            <th class="table-light text-nowrap" style="width: 12%;">@heads[i + 1].Label</th>
+                                            <td style="width: 38%;">@(heads[i + 1].Val == "" ? "-" : heads[i + 1].Val)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            @* 內文是這頁的重點，只放大這兩段 (fs-5 = 20px)，不動全站基礎字級；pre-line 保留換行 *@
+                            <div class="mt-3">
+                                <div class="fw-semibold mb-1">Report</div>
+                                <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Report == "" ? "-" : x.Report)</div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="fw-semibold mb-1">Impression</div>
+                                <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Impression == "" ? "-" : x.Impression)</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
             else if (c.Flag == "V")
             {
-                @* 清單的 Flag 看的是有沒有開單；EKG 開了單但報告還沒出來會走到這裡，CXR／KUB 報告內容待補 *@
-                <p class="text-muted mb-0">@(c.Nam == "EKG" ? "已開單，尚無報告" : "已開單，此頁尚未提供報告內容")</p>
+                @* 清單的 Flag 看的是有沒有開單；EKG／CXR 開了單但報告還沒出來會走到這裡，KUB 報告內容待補 *@
+                <p class="text-muted mb-0">@(c.Nam == "KUB" ? "已開單，此頁尚未提供報告內容" : "已開單，尚無報告")</p>
             }
             else
             {
