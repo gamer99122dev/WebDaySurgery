@@ -6,6 +6,7 @@
     (string TeamNo, string TeamNam, string[] Heads)[] labTeams = ViewBag.LabChkTeams;
     (string Nam, string Col, string[] Codes)[] examChks = ViewBag.ExamChks;
     string bloodPrepOrdNo = ViewBag.BloodPrepOrdNo;
+    int lookbackMonths = ViewBag.LookbackMonths;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -95,8 +96,8 @@
 <h3 class="h6 text-muted mt-3">資料範圍</h3>
 <ul>
     <li>只採計<strong>已收件</strong>的檢驗報告，以<strong>收件日期</strong>落在區間內為準。</li>
-    <li>依<strong>手術日期</strong>查詢時：手術日往前 3 個月，到手術日當天。</li>
-    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 3 個月，到該筆手術日當天。</li>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前 @lookbackMonths 個月，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 @lookbackMonths 個月，到該筆手術日當天。</li>
 </ul>
 
 <h2 class="h4 mt-4">檢查</h2>
@@ -127,8 +128,8 @@
 
 <h3 class="h6 text-muted mt-3">資料範圍</h3>
 <ul>
-    <li>依<strong>手術日期</strong>查詢時：手術日往前 3 個月，到手術日當天。</li>
-    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 3 個月，到該筆手術日當天。</li>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前 @lookbackMonths 個月，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 @lookbackMonths 個月，到該筆手術日當天。</li>
 </ul>
 
 <div class="alert alert-info">
@@ -145,8 +146,8 @@
 
 <h3 class="h6 text-muted mt-3">資料範圍</h3>
 <ul>
-    <li>依<strong>手術日期</strong>查詢時：手術日往前 3 個月，到手術日當天。</li>
-    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 3 個月，到該筆手術日當天。</li>
+    <li>依<strong>手術日期</strong>查詢時：手術日往前 @lookbackMonths 個月，到手術日當天。</li>
+    <li>依<strong>病歷號</strong>查詢時：每一筆預約各自算，該筆的手術日往前 @lookbackMonths 個月，到該筆手術日當天。</li>
 </ul>
 
 <div class="alert alert-info">

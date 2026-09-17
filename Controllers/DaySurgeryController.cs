@@ -25,7 +25,7 @@ namespace WebDaySurgery.Controllers
         private const string AnesUserId = "11208";
 
         // 術前檢驗／檢查／備血／心電圖報告／麻醉評估都抓手術日往前這麼多個月 (2026-09-17 需求者定的，跟門診系統心電圖畫面一樣抓 3 個月)。
-        // 畫面 (LabResult、PatientListHelp) 的「3 個月」是寫死的文案，沒接這個常數，改這裡要記得一起改
+        // 畫面 (LabResult、PatientListHelp) 的「往前 N 個月」文案走 ViewBag 吃這個常數，改這裡畫面跟著變
         private const int LookbackMonths = 3;
 
         // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
@@ -154,6 +154,7 @@ namespace WebDaySurgery.Controllers
             ViewBag.LabChkTeams = LabChkTeams;
             ViewBag.ExamChks = ExamChks;
             ViewBag.BloodPrepOrdNo = BloodPrepOrdNo;
+            ViewBag.LookbackMonths = LookbackMonths;
 
             return View();
         }
@@ -194,6 +195,7 @@ namespace WebDaySurgery.Controllers
             List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
+            ViewBag.LookbackMonths = LookbackMonths;
 
             return View();
         }
