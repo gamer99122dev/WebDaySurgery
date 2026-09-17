@@ -3,6 +3,7 @@
     ViewData["Title"] = "檢查報告";
     DateTime resvDate = ViewBag.ResvDate;
     Resv patient = ViewBag.Patient;
+    List<Ekg> ekgs = ViewBag.Ekgs;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -44,11 +45,40 @@
             <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
         </h2>
         <div class="card-body">
-            @* 清單的 Flag 看的是有沒有開單，沒開單就不會有報告 *@
-            @if (c.Flag == "V")
+            @* EKG 有報告就列表格；沒報告才看 Flag 分「開了沒出報告」和「沒開單」 *@
+            @if (c.Nam == "EKG" && ekgs.Count > 0)
             {
-                @* 報告內容待補 *@
-                <p class="text-muted mb-0">已開單，此頁尚未提供報告內容</p>
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>檢驗名稱</th>
+                            <th>簽收時間</th>
+                            <th>報告時間</th>
+                            <th>診斷</th>
+                            <th>敘述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (Ekg e in ekgs)
+                        {
+                            @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位；轉不出來會是空字串，跟診斷／敘述一樣沒有就顯示 - *@
+                            string rcpDTM = e.RcpDTM.pLeft(11).pSyyymmddhhmm();
+                            string rptDTM = e.RptDTM.pLeft(11).pSyyymmddhhmm();
+                            <tr>
+                                <td class="text-nowrap">@e.OrdNam</td>
+                                <td class="text-nowrap">@(rcpDTM == "" ? "-" : rcpDTM)</td>
+                                <td class="text-nowrap">@(rptDTM == "" ? "-" : rptDTM)</td>
+                                <td>@(e.Diag == "" ? "-" : e.Diag)</td>
+                                <td>@(e.Desc == "" ? "-" : e.Desc)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else if (c.Flag == "V")
+            {
+                @* 清單的 Flag 看的是有沒有開單；EKG 開了單但報告還沒出來會走到這裡，CXR／KUB 報告內容待補 *@
+                <p class="text-muted mb-0">@(c.Nam == "EKG" ? "已開單，尚無報告" : "已開單，此頁尚未提供報告內容")</p>
             }
             else
             {

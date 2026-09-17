@@ -72,7 +72,7 @@
 
 <h2 class="h5 mb-2">
     檢驗項目
-    <span class="text-muted fw-normal">— 手術日往前 14 天，<span id="labCount">@labs.Count</span> 筆</span>
+    <span class="text-muted fw-normal">— 手術日往前 3 個月，<span id="labCount">@labs.Count</span> 筆</span>
 </h2>
 
 <div class="table-responsive">
@@ -129,7 +129,7 @@
             }
             @* 空表會被當成還在載入或壞掉。列是固定的，訊息在這裡就定好：一筆都沒有 vs 有資料但類別全被取消勾選；顯不顯示由 apply() 決定 *@
             <tr id="labEmpty" hidden>
-                <td colspan="11" class="text-center py-4">@(labs.Count == 0 ? "手術日往前 14 天內沒有檢驗報告" : "類別全部取消勾選了，請勾選要看的類別")</td>
+                <td colspan="11" class="text-center py-4">@(labs.Count == 0 ? "手術日往前 3 個月內沒有檢驗報告" : "類別全部取消勾選了，請勾選要看的類別")</td>
             </tr>
         </tbody>
     </table>

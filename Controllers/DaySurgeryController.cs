@@ -24,9 +24,9 @@ namespace WebDaySurgery.Controllers
         // 麻醉系統要的使用者 ID (必填)。這支程式還沒有登入機制，先固定帶一個，接上登入後改帶登入者
         private const string AnesUserId = "11208";
 
-        // 術前檢驗／檢查／麻醉評估都抓手術日往前這麼多天。
-        // 畫面 (LabResult、PatientListHelp) 寫的「14 天」是需求者暫訂的文案，刻意不接這個常數
-        private const int LabLookbackDays = 31;
+        // 術前檢驗／檢查／備血／心電圖報告／麻醉評估都抓手術日往前這麼多個月 (2026-09-17 需求者定的，跟門診系統心電圖畫面一樣抓 3 個月)。
+        // 畫面 (LabResult、PatientListHelp) 的「3 個月」是寫死的文案，沒接這個常數，改這裡要記得一起改
+        private const int LookbackMonths = 3;
 
         // 術前只看這三類檢驗，以及每一類該有的項目 (chHead)；類別代碼見 DB_ADM..AdmLabTeamTbl。
         // 要多看一類、或某一類要增減項目，改這裡就好。
@@ -42,13 +42,16 @@ namespace WebDaySurgery.Controllers
             ("J", "血糖檢查", new[] { "GLU(PC)/GLU(AC)" }),
         };
 
+        // 心電圖的院內醫令碼 (chOp4OrdNo)。清單判「開了沒」和檢查報告頁撈報告都用它
+        private const string EkgOrdNo = "L18001";
+
         // 術前只看這三項檢查。32001C 那類是健保碼 (chOp4OrdHis)，L18001 是院內醫令碼 (chOp4OrdNo)；
         // 這份設定同時被組 SQL 條件和判定用，改一處就好
         private static readonly (string Nam, string Col, string[] Codes)[] ExamChks =
         {
             ("CXR", "chOp4OrdHis", new[] { "32001C", "32002C" }),
             ("KUB", "chOp4OrdHis", new[] { "32006C", "32011C" }),
-            ("EKG", "chOp4OrdNo", new[] { "L18001" }),
+            ("EKG", "chOp4OrdNo", new[] { EkgOrdNo }),
         };
 
         // 備血的院內醫令碼 (chOp4OrdNo)。只有一項，開了就是有，不像檢查要比好幾個代碼
@@ -187,8 +190,8 @@ namespace WebDaySurgery.Controllers
             // eGFR 要生日和性別，AdmResvTbl 沒有，得另外查病歷基本資料
             (string birthday, string sex, _) = QueryPatientBasic(mrNo);
 
-            // 術前檢驗抓手術日往前 LabLookbackDays 天
-            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddDays(-LabLookbackDays), ResvDate.Value);
+            // 術前檢驗抓手術日往前 LookbackMonths 個月
+            List<Lab> labs = QueryLab(mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
 
             ViewBag.Labs = AddReportFlag(AddCalcRows(labs, birthday, sex));
 
@@ -207,7 +210,7 @@ namespace WebDaySurgery.Controllers
 
         // 階段一 (3) 檢查報告 (畫面)
         // CXR／KUB／EKG 三項同一頁，沒開單的那項顯示無結果；三項的開單狀況清單已經算好，直接用 patient.Exams
-        // ponytail: 目前只畫表頭，報告內容等資料來源確定再補
+        // ponytail: 只有 EKG 有報告內容，CXR／KUB 等資料來源確定再補
         [HttpGet]
         public IActionResult ExamResult(DateTime? ResvDate)
         {
@@ -226,6 +229,9 @@ namespace WebDaySurgery.Controllers
             ViewBag.ResvDate = ResvDate.Value;
             ViewBag.Patient = patient;
 
+            // 心電圖報告跟清單判「開了沒」同一個窗，都是手術日往前 LookbackMonths 個月
+            ViewBag.Ekgs = QueryEkg(mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
+
             return View();
         }
 
@@ -236,7 +242,7 @@ namespace WebDaySurgery.Controllers
         {
             // 術前評估跟檢驗同一個區間
             string url = await ANESCaller.GetUrl(MrNo.pNullOrTrim(), AnesUserId,
-                                                 ResvDate.AddDays(-LabLookbackDays).ToString("yyyy/MM/dd"),
+                                                 ResvDate.AddMonths(-LookbackMonths).ToString("yyyy/MM/dd"),
                                                  ResvDate.ToString("yyyy/MM/dd"));
 
             // 查不到的時候 API 回的是訊息不是網址，原樣秀出來，不要導去怪地方
@@ -627,6 +633,65 @@ namespace WebDaySurgery.Controllers
         }
 
         /// <summary>
+        /// 查詢指定病歷號、指定日期區間內開立的心電圖報告。SQL 是門診系統心電圖畫面那一段搬過來的，
+        /// 一份報告 (chGReqNo + chReqNo) 在 AdmPAHResultTextTbl 會有好幾列，這裡併成一筆
+        /// </summary>
+        private List<Ekg> QueryEkg(string MrNo, DateTime DateS, DateTime DateE)
+        {
+            string sMrNo = MrNo.pSQLValidator();
+
+            // chOp1Date 是民國 7 碼看診日 (1150825)
+            string sDateS = DateS.pRyyymmdd().pSQLValidator();
+            string sDateE = DateE.pRyyymmdd().pSQLValidator();
+
+            string SQL = "SELECT C.chGReqNo, C.chReqNo, C.chSegCod, C.chTxt, D.chOrdNam, D.chRcpDTM, D.chRptDTM ";
+            SQL += $"\n FROM DB_OPD..OpdOrdTbl A ";
+            SQL += $"\n LEFT JOIN DB_OPD..OpdBasicTbl B ";
+            SQL += $"\n ON A.chOp1Date = B.chOp1Date AND A.chOp1Time = B.chOp1Time AND A.chOp1Room = B.chOp1Room AND A.intOp1No = B.intOp1No ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmPAHResultTextTbl C ";
+            SQL += $"\n ON A.chOp4GReqNo = C.chGReqNo AND A.chOp4ReqNo = C.chReqNo ";
+            SQL += $"\n LEFT JOIN DB_ADM..AdmRqtrcpLWTbl D ";
+            SQL += $"\n ON C.chGReqNo = D.chGReqNo AND C.chReqNo = D.chReqNo ";
+            SQL += $"\n WHERE ";
+            SQL += $"\n A.chOp1Date BETWEEN '{sDateS}' AND '{sDateE}' ";
+            // DC = 作廢
+            SQL += $"\n AND A.chOp4Stat <> 'DC' ";
+            SQL += $"\n AND A.chOp4OrdNo = '{EkgOrdNo}' ";
+            SQL += $"\n AND B.chOp1MrNo = '{sMrNo}' ";
+            // 30／60／70 才有報告可看；K = 心電圖。這兩組條件跟門診系統一樣，是固定的
+            SQL += $"\n AND C.chStat IN ('30','60','70') ";
+            SQL += $"\n AND C.chType = 'K' ";
+            // chGReqNo 開頭是日期，倒排就是新的在上
+            SQL += $"\n ORDER BY C.chGReqNo DESC, C.chReqNo DESC ";
+
+            // 診斷／敘述是同一份報告的兩列 (chSegCod 02／01)，用單號把它們併到同一筆；
+            // 門診系統同一段有好幾列時是後面的蓋前面的，照做
+            List<Ekg> ekgs = new List<Ekg>();
+            Dictionary<string, Ekg> byReq = new Dictionary<string, Ekg>();
+            foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
+            {
+                string key = r.pCol("chGReqNo") + "|" + r.pCol("chReqNo");
+                if (!byReq.TryGetValue(key, out Ekg? ekg))
+                {
+                    ekg = new Ekg
+                    {
+                        GReqNo = r.pCol("chGReqNo"),
+                        ReqNo = r.pCol("chReqNo"),
+                        OrdNam = r.pCol("chOrdNam"),
+                        RcpDTM = r.pCol("chRcpDTM"),
+                        RptDTM = r.pCol("chRptDTM"),
+                    };
+                    byReq[key] = ekg;
+                    ekgs.Add(ekg);
+                }
+
+                if (r.pCol("chSegCod") == "02") ekg.Diag = r.pCol("chTxt");
+                if (r.pCol("chSegCod") == "01") ekg.Desc = r.pCol("chTxt");
+            }
+            return ekgs;
+        }
+
+        /// <summary>
         /// 查詢指定病歷號、指定日期區間內、指定科別、尚未產生住院號的預約住院資料
         /// </summary>
         private List<Resv> QueryResvByMrNo(string MrNo, DateTime DateS, DateTime DateE)
@@ -717,7 +782,7 @@ namespace WebDaySurgery.Controllers
             List<string> mrList = new List<string> { mrNoKey };
 
             // 這支查的是「今天起三個月內的預約」，同一個人可能有好幾台刀，
-            // 每一列的檢驗／檢查都要照自己那台刀的住院日往前推 30 天，
+            // 每一列的檢驗／檢查都要照自己那台刀的住院日往前推 LookbackMonths 個月，
             // 一個區間套全部會把別台刀的資料算進來，所以逐個住院日各查一次
             Dictionary<string, List<ChkItem>> labChks = new Dictionary<string, List<ChkItem>>();
             Dictionary<string, List<ChkItem>> examChks = new Dictionary<string, List<ChkItem>>();
@@ -742,7 +807,7 @@ namespace WebDaySurgery.Controllers
             {
                 //檢驗
                 string LwDateE = pDate.pSQLValidator();
-                string LwDateS = pDate.pToDateTime().AddDays(-LabLookbackDays).pRyyymmdd();
+                string LwDateS = pDate.pToDateTime().AddMonths(-LookbackMonths).pRyyymmdd();
 
                 // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
                 // select * 會讓 A、B 兩張表的同名欄位在 DataTable 裡被自動改名 (chMRNo1)，反而不好取值
@@ -765,7 +830,7 @@ namespace WebDaySurgery.Controllers
 
                 //檢查／備血
                 // 這兩欄都看門診醫令，同一份寬撈的資料在 C# 裡分兩份，一天只打一趟 DB。
-                // 起迄跟檢驗一樣，都是這台刀的住院日往前推 30 天
+                // 起迄跟檢驗一樣，都是這台刀的住院日往前推 LookbackMonths 個月
                 DataTable dtOrd = QueryOpdOrd(LwDateS, LwDateE, mrList);
 
                 // 只有一個人，但旗標怎麼算跟清單同一套
@@ -925,7 +990,7 @@ namespace WebDaySurgery.Controllers
             }
 
             //檢驗
-            string LwDateS = sDateE.pToDateTime().AddDays(-LabLookbackDays).pRyyymmdd();
+            string LwDateS = sDateE.pToDateTime().AddMonths(-LookbackMonths).pRyyymmdd();
             string LwDateE = sDateE;
 
             // 只要知道「這個人這一類有沒有開這個項目」，撈這三欄就夠；
@@ -951,7 +1016,7 @@ namespace WebDaySurgery.Controllers
 
             //檢查／備血
             // 這兩欄都看門診醫令，同一批人、同一個區間，一次寬撈回來在 C# 裡分兩份。
-            // 起迄跟檢驗一樣，都是住院日往前推 30 天
+            // 起迄跟檢驗一樣，都是住院日往前推 LookbackMonths 個月
             DataTable dtOrd = QueryOpdOrd(LwDateS, LwDateE, MrList);
             Dictionary<string, List<ChkItem>> examChks = BuildExamChk(dtOrd, MrList);
             HashSet<string> bloodPreps = BuildBloodPrep(dtOrd);
