@@ -4,7 +4,8 @@
     DateTime resvDate = ViewBag.ResvDate;
     Resv patient = ViewBag.Patient;
     List<Ekg> ekgs = ViewBag.Ekgs;
-    List<Cxr> cxrs = ViewBag.Cxrs;
+    List<Rad> cxrs = ViewBag.Cxrs;
+    List<Rad> kubs = ViewBag.Kubs;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -46,7 +47,12 @@
             <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
         </h2>
         <div class="card-body">
-            @* EKG 有報告就列表格；沒報告才看 Flag 分「開了沒出報告」和「沒開單」 *@
+            @* CXR／KUB 同一個放射科格式，只是資料不同份 *@
+            @{
+                List<Rad> rads = c.Nam switch { "CXR" => cxrs, "KUB" => kubs, _ => new List<Rad>() };
+            }
+
+            @* 有報告就列出來；沒報告才看 Flag 分「開了沒出報告」和「沒開單」 *@
             @if (c.Nam == "EKG" && ekgs.Count > 0)
             {
                 <table class="table table-bordered align-middle mb-0">
@@ -76,12 +82,12 @@
                     </tbody>
                 </table>
             }
-            else if (c.Nam == "CXR" && cxrs.Count > 0)
+            else if (rads.Count > 0)
             {
                 @* 一張單一個區塊：表頭排成有格線的表格，順序照門診放射報告畫面：放射名稱一整列，
                    之後「時間在左、人在右」兩兩一列；下面 Report／Impression 兩段文字。高齡者靠格線和粗體標題找欄位，不用小灰字 *@
                 <div class="vstack gap-3">
-                    @foreach (Cxr x in cxrs)
+                    @foreach (Rad x in rads)
                     {
                         @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位；轉不出來會是空字串，統一顯示 - *@
                         (string Label, string Val)[] heads = new[]
@@ -124,8 +130,8 @@
             }
             else if (c.Flag == "V")
             {
-                @* 清單的 Flag 看的是有沒有開單；EKG／CXR 開了單但報告還沒出來會走到這裡，KUB 報告內容待補 *@
-                <p class="text-muted mb-0">@(c.Nam == "KUB" ? "已開單，此頁尚未提供報告內容" : "已開單，尚無報告")</p>
+                @* 清單的 Flag 看的是有沒有開單；開了單但報告還沒出來會走到這裡 *@
+                <p class="text-muted mb-0">已開單，尚無報告</p>
             }
             else
             {

@@ -45,15 +45,16 @@ namespace WebDaySurgery.Controllers
         // 心電圖的院內醫令碼 (chOp4OrdNo)。清單判「開了沒」和檢查報告頁撈報告都用它
         private const string EkgOrdNo = "L18001";
 
-        // 胸部X光的健保碼 (chOp4OrdHis)。同上，清單和檢查報告頁共用
+        // 胸部X光／腹部X光的健保碼 (chOp4OrdHis)。同上，清單和檢查報告頁共用
         private static readonly string[] CxrOrdHis = { "32001C", "32002C" };
+        private static readonly string[] KubOrdHis = { "32006C", "32011C" };
 
         // 術前只看這三項檢查。32001C 那類是健保碼 (chOp4OrdHis)，L18001 是院內醫令碼 (chOp4OrdNo)；
         // 這份設定同時被組 SQL 條件和判定用，改一處就好
         private static readonly (string Nam, string Col, string[] Codes)[] ExamChks =
         {
             ("CXR", "chOp4OrdHis", CxrOrdHis),
-            ("KUB", "chOp4OrdHis", new[] { "32006C", "32011C" }),
+            ("KUB", "chOp4OrdHis", KubOrdHis),
             ("EKG", "chOp4OrdNo", new[] { EkgOrdNo }),
         };
 
@@ -215,7 +216,6 @@ namespace WebDaySurgery.Controllers
 
         // 階段一 (3) 檢查報告 (畫面)
         // CXR／KUB／EKG 三項同一頁，沒開單的那項顯示無結果；三項的開單狀況清單已經算好，直接用 patient.Exams
-        // ponytail: EKG／CXR 有報告內容，KUB 等資料來源確定再補
         [HttpGet]
         public IActionResult ExamResult(DateTime? ResvDate)
         {
@@ -236,7 +236,8 @@ namespace WebDaySurgery.Controllers
 
             // 報告跟清單判「開了沒」同一個窗，都是手術日往前 LookbackMonths 個月
             ViewBag.Ekgs = QueryEkg(mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
-            ViewBag.Cxrs = QueryCxr(mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
+            ViewBag.Cxrs = QueryRad(CxrOrdHis, mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
+            ViewBag.Kubs = QueryRad(KubOrdHis, mrNo, ResvDate.Value.AddMonths(-LookbackMonths), ResvDate.Value);
 
             return View();
         }
@@ -698,10 +699,10 @@ namespace WebDaySurgery.Controllers
         }
 
         /// <summary>
-        /// 查詢指定病歷號、指定日期區間內開立的胸部X光報告。
+        /// 查詢指定病歷號、指定日期區間內開立的放射科報告，CXR／KUB 只差健保碼 (OrdHis)，其餘同一套。
         /// 照門診系統放射報告畫面的做法分三段查、刻意不 JOIN (需求者要求)：先從門診醫令拿單號，再逐張單查表頭和內文
         /// </summary>
-        private List<Cxr> QueryCxr(string MrNo, DateTime DateS, DateTime DateE)
+        private List<Rad> QueryRad(string[] OrdHis, string MrNo, DateTime DateS, DateTime DateE)
         {
             string sMrNo = MrNo.pSQLValidator();
 
@@ -709,7 +710,7 @@ namespace WebDaySurgery.Controllers
             string sDateS = DateS.pRyyymmdd().pSQLValidator();
             string sDateE = DateE.pRyyymmdd().pSQLValidator();
 
-            // 第一段：這個人區間內開的 CXR 單號
+            // 第一段：這個人區間內開的單號
             string SQL = "SELECT B.chOp4GReqNo, B.chOp4ReqNo ";
             SQL += $"\n FROM DB_OPD..OpdBasicTbl A ";
             SQL += $"\n JOIN DB_OPD..OpdOrdTbl B ";
@@ -717,13 +718,13 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n WHERE ";
             SQL += $"\n A.chOp1MrNo = '{sMrNo}' ";
             SQL += $"\n AND A.chOp1Date BETWEEN '{sDateS}' AND '{sDateE}' ";
-            SQL += $"\n AND B.chOp4OrdHis IN ({CxrOrdHis.pJoinWithQuote()}) ";
+            SQL += $"\n AND B.chOp4OrdHis IN ({OrdHis.pJoinWithQuote()}) ";
             // DC = 作廢
             SQL += $"\n AND B.chOp4Stat <> 'DC' ";
             // chOp4GReqNo 開頭是日期，倒排就是新的在上
             SQL += $"\n ORDER BY B.chOp4GReqNo DESC, B.chOp4ReqNo DESC ";
 
-            List<Cxr> cxrs = new List<Cxr>();
+            List<Rad> rads = new List<Rad>();
             foreach (DataRow o in _db.executesqldt(SQL).AsEnumerable())
             {
                 string sGReqNo = o.pCol("chOp4GReqNo").pSQLValidator();
@@ -747,7 +748,7 @@ namespace WebDaySurgery.Controllers
                 // 修改時間／版本門診只在 chStat 70 (報告修改過) 才顯示，其他狀態當沒有，畫面會是 -
                 bool modified = h.pCol("chStat") == "70";
 
-                Cxr cxr = new Cxr
+                Rad rad = new Rad
                 {
                     OrdNam = h.pCol("chOrdNam"),
                     AppDTM = h.pCol("chAppDTM"),
@@ -768,13 +769,13 @@ namespace WebDaySurgery.Controllers
 
                 foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
                 {
-                    if (r.pCol("chSegCod") == "01") cxr.Report = r.pCol("chTxt");
-                    if (r.pCol("chSegCod") == "02") cxr.Impression = r.pCol("chTxt");
+                    if (r.pCol("chSegCod") == "01") rad.Report = r.pCol("chTxt");
+                    if (r.pCol("chSegCod") == "02") rad.Impression = r.pCol("chTxt");
                 }
 
-                cxrs.Add(cxr);
+                rads.Add(rad);
             }
-            return cxrs;
+            return rads;
         }
 
         /// <summary>
