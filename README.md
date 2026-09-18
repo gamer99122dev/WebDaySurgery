@@ -169,4 +169,4 @@ icacls ... （同上第 3 步）                  # 2. 覆寫可能還原繼承�
 
 ---
 
-規格全文：[`../Docs/NET10-MVC-MSSQL-DPAPI-Spec.md`](../Docs/NET10-MVC-MSSQL-DPAPI-Spec.md)
+規格全文：[`../WebToolNet/Docs/NET10-MVC-MSSQL-DPAPI-Spec.md`](../WebToolNet/Docs/NET10-MVC-MSSQL-DPAPI-Spec.md)
