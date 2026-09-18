@@ -1,7 +1,7 @@
 using System.Data;
 using Microsoft.Extensions.Caching.Memory;
 using WebToolNet.Data;
-using WebToolNet.UtilExtension;
+using WebToolNet.Extensions;
 
 namespace WebDaySurgery.Services
 {
