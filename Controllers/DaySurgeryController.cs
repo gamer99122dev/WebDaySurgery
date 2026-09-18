@@ -3,6 +3,7 @@ using System.Data;
 using System.Text.RegularExpressions;
 using WebDaySurgery.Models;
 using WebDaySurgery.Services;
+using WebToolNet.Data;
 using WebToolNet.myDateTime;
 using WebToolNet.UtilExtension;
 using WebToolNet.UtilExtension.myDateTime;
@@ -12,7 +13,7 @@ namespace WebDaySurgery.Controllers
 {
     public class DaySurgeryController : Controller
     {
-        private readonly WebToolNet.DBConn.DBConn _db;
+        private readonly DBConn _db;
 
         // ── 設定 ────────────────────────────────────────────────
         // 要切換的開關、要增減的清單都集中在這裡，改這裡就好
@@ -67,7 +68,7 @@ namespace WebDaySurgery.Controllers
 
         // ── 設定結束 ────────────────────────────────────────────
 
-        public DaySurgeryController(WebToolNet.DBConn.DBConn db) => _db = db;
+        public DaySurgeryController(DBConn db) => _db = db;
 
         // 階段一 (1) 預定床位
         // 查詢條件只有日期，不敏感，查詢就用 GET 帶在網址上，

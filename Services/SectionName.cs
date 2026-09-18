@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.Extensions.Caching.Memory;
+using WebToolNet.Data;
 using WebToolNet.UtilExtension;
 
 namespace WebDaySurgery.Services
@@ -9,10 +10,10 @@ namespace WebDaySurgery.Services
     /// </summary>
     public class SectionName
     {
-        private readonly WebToolNet.DBConn.DBConn _db;
+        private readonly DBConn _db;
         private readonly IMemoryCache _cache;
 
-        public SectionName(WebToolNet.DBConn.DBConn db, IMemoryCache cache)
+        public SectionName(DBConn db, IMemoryCache cache)
         {
             _db = db;
             _cache = cache;
