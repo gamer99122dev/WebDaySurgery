@@ -295,7 +295,7 @@ namespace WebDaySurgery.Services
 
             if (checkDate.isTWDate(strTWD_LMP) == true)
             {
-                //WebToolNet.myDateTime.DateComputing dateComputing = new WebToolNet.myDateTime.DateComputing();
+                //WebToolNet.Dates.DateComputing dateComputing = new WebToolNet.Dates.DateComputing();
                 //dateComputing.
                 DateTime dateEDC = strTWD_LMP.pToDateTime().AddMonths(+9).AddDays(+7);
                 result = dateEDC.pRyyymmdd();
