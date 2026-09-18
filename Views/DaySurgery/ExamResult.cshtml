@@ -41,8 +41,9 @@
 @foreach (ChkItem c in patient.Exams)
 {
     <div class="card mb-3">
-        @* badge 跟清單同一套，符號本身就分得出來，不是只靠顏色 *@
-        <h2 class="card-header h5 mb-0">
+        @* badge 跟清單同一套，符號本身就分得出來，不是只靠顏色；
+           標題淡藍底是要跟下面灰底的摘要列／Report 框分出層級，全灰高齡者找不到大項在哪 *@
+        <h2 class="card-header h5 mb-0 bg-primary-subtle">
             @c.Nam @c.Nam.pMapValue("CXR", "胸部X光", "KUB", "腹部X光", "EKG", "心電圖")
             <span class="badge @c.Flag.pMapValue("V", "bg-success", "!", "bg-warning text-dark", "X", "bg-danger")">@c.Flag.pMapValue("V", "✓", "!", "!", "X", "✗")</span>
         </h2>
@@ -87,44 +88,54 @@
                 @* 一張單一個區塊：表頭排成有格線的表格，順序照門診放射報告畫面：放射名稱一整列，
                    之後「時間在左、人在右」兩兩一列；下面 Report／Impression 兩段文字。高齡者靠格線和粗體標題找欄位，不用小灰字 *@
                 <div class="vstack gap-3">
-                    @foreach (Rad x in rads)
+                    @for (int n = 0; n < rads.Count; n++)
                     {
+                        Rad x = rads[n];
+
                         @* 先 pLeft 再轉，欄位若含到秒數才不會切錯位；轉不出來會是空字串，統一顯示 - *@
+                        string rcpDTM = x.RcpDTM.pLeft(11).pSyyymmddhhmm();
                         (string Label, string Val)[] heads = new[]
                         {
                             ("申請時間", x.AppDTM.pLeft(11).pSyyymmddhhmm()), ("申請醫師", x.AppNm),
-                            ("照片時間", x.RcpDTM.pLeft(11).pSyyymmddhhmm()), ("放射師", x.Tec1),
+                            ("照片時間", rcpDTM), ("放射師", x.Tec1),
                             ("報告時間", x.VerDTM.pLeft(11).pSyyymmddhhmm()), ("報告醫師", x.VerNm),
                             ("修改時間", x.ModDTM.pLeft(11).pSyyymmddhhmm()), ("修改版本", x.ModTM),
                         };
-                        <div class="border rounded p-3">
-                            <table class="table table-bordered align-middle mb-0">
-                                <tbody>
-                                    <tr>
-                                        <th class="table-light text-nowrap" style="width: 12%;">放射名稱</th>
-                                        <td colspan="3">@(x.OrdNam == "" ? "-" : x.OrdNam)</td>
-                                    </tr>
-                                    @for (int i = 0; i < heads.Length; i += 2)
-                                    {
+
+                        @* 好幾份時每份長得一樣、一份就一個螢幕高，捲到中間分不出在看哪份：
+                           只有最新一份 (n == 0) 預設展開，其餘收成一列摘要，點了才展開。用原生 details 不用 JS；
+                           open 給 false 時 Razor 會整個屬性不輸出。overflow-hidden 是讓摘要列的底色跟著圓角切 *@
+                        <details class="border rounded overflow-hidden" open="@(n == 0)">
+                            <summary class="fs-5 fw-semibold bg-light p-3">照片時間 @(rcpDTM == "" ? "-" : rcpDTM)　@(x.OrdNam == "" ? "-" : x.OrdNam)　申請醫師 @(x.AppNm == "" ? "-" : x.AppNm)　報告醫師 @(x.VerNm == "" ? "-" : x.VerNm)</summary>
+                            <div class="p-3">
+                                <table class="table table-bordered align-middle mb-0">
+                                    <tbody>
                                         <tr>
-                                            <th class="table-light text-nowrap" style="width: 12%;">@heads[i].Label</th>
-                                            <td style="width: 38%;">@(heads[i].Val == "" ? "-" : heads[i].Val)</td>
-                                            <th class="table-light text-nowrap" style="width: 12%;">@heads[i + 1].Label</th>
-                                            <td style="width: 38%;">@(heads[i + 1].Val == "" ? "-" : heads[i + 1].Val)</td>
+                                            <th class="table-light text-nowrap" style="width: 12%;">放射名稱</th>
+                                            <td colspan="3">@(x.OrdNam == "" ? "-" : x.OrdNam)</td>
                                         </tr>
-                                    }
-                                </tbody>
-                            </table>
-                            @* 內文是這頁的重點，只放大這兩段 (fs-5 = 20px)，不動全站基礎字級；pre-line 保留換行 *@
-                            <div class="mt-3">
-                                <div class="fw-semibold mb-1">Report</div>
-                                <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Report == "" ? "-" : x.Report)</div>
+                                        @for (int i = 0; i < heads.Length; i += 2)
+                                        {
+                                            <tr>
+                                                <th class="table-light text-nowrap" style="width: 12%;">@heads[i].Label</th>
+                                                <td style="width: 38%;">@(heads[i].Val == "" ? "-" : heads[i].Val)</td>
+                                                <th class="table-light text-nowrap" style="width: 12%;">@heads[i + 1].Label</th>
+                                                <td style="width: 38%;">@(heads[i + 1].Val == "" ? "-" : heads[i + 1].Val)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                @* 內文是這頁的重點，只放大這兩段 (fs-5 = 20px)，不動全站基礎字級；pre-line 保留換行 *@
+                                <div class="mt-3">
+                                    <div class="fw-semibold mb-1">Report</div>
+                                    <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Report == "" ? "-" : x.Report)</div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="fw-semibold mb-1">Impression</div>
+                                    <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Impression == "" ? "-" : x.Impression)</div>
+                                </div>
                             </div>
-                            <div class="mt-3">
-                                <div class="fw-semibold mb-1">Impression</div>
-                                <div class="bg-light border rounded p-3 fs-5" style="white-space: pre-line; line-height: 1.6;">@(x.Impression == "" ? "-" : x.Impression)</div>
-                            </div>
-                        </div>
+                        </details>
                     }
                 </div>
             }
