@@ -270,7 +270,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n WHERE ";
             SQL += $"\n chMRNo = '{MrNo.pSQLValidator()}' ";
 
-            DataTable dt = _db.executesqldt(SQL);
+            DataTable dt = _db.Query(SQL);
 
             // 只有幾個欄位、也只有兩個地方用，不值得為它開一個類別
             return dt.Rows.Count == 0 ? ("", "", false) : (dt.Rows[0].pCol("chBirthday"), dt.Rows[0].pCol("chSex"), true);
@@ -610,7 +610,7 @@ namespace WebDaySurgery.Controllers
 
             // SELECT 還有幾個目前沒人用的欄位 (chPName、chCommt、chMdDTM…)，用到再補上來
             List<Lab> labs = new List<Lab>();
-            foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
+            foreach (DataRow r in _db.Query(SQL).AsEnumerable())
             {
                 labs.Add(new Lab
                 {
@@ -675,7 +675,7 @@ namespace WebDaySurgery.Controllers
             // 門診系統同一段有好幾列時是後面的蓋前面的，照做
             List<Ekg> ekgs = new List<Ekg>();
             Dictionary<string, Ekg> byReq = new Dictionary<string, Ekg>();
-            foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
+            foreach (DataRow r in _db.Query(SQL).AsEnumerable())
             {
                 string key = r.pCol("chGReqNo") + "|" + r.pCol("chReqNo");
                 if (!byReq.TryGetValue(key, out Ekg? ekg))
@@ -725,7 +725,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n ORDER BY B.chOp4GReqNo DESC, B.chOp4ReqNo DESC ";
 
             List<Rad> rads = new List<Rad>();
-            foreach (DataRow o in _db.executesqldt(SQL).AsEnumerable())
+            foreach (DataRow o in _db.Query(SQL).AsEnumerable())
             {
                 string sGReqNo = o.pCol("chOp4GReqNo").pSQLValidator();
                 string sReqNo = o.pCol("chOp4ReqNo").pSQLValidator();
@@ -738,7 +738,7 @@ namespace WebDaySurgery.Controllers
                 SQL += $"\n FROM DB_ADM..AdmRqtrcpRWTbl ";
                 SQL += $"\n WHERE chGReqNo = '{sGReqNo}' AND chReqNo = '{sReqNo}' ";
 
-                DataTable dtHead = _db.executesqldt(SQL);
+                DataTable dtHead = _db.Query(SQL);
 
                 // 放射科還沒收這張單就沒有表頭，畫面會落到「已開單，尚無報告」
                 if (dtHead.Rows.Count == 0) continue;
@@ -767,7 +767,7 @@ namespace WebDaySurgery.Controllers
                 SQL += $"\n WHERE chGReqNo = '{sGReqNo}' AND chReqNo = '{sReqNo}' ";
                 SQL += $"\n AND chSegCod IN ('01','02') ";
 
-                foreach (DataRow r in _db.executesqldt(SQL).AsEnumerable())
+                foreach (DataRow r in _db.Query(SQL).AsEnumerable())
                 {
                     if (r.pCol("chSegCod") == "01") rad.Report = r.pCol("chTxt");
                     if (r.pCol("chSegCod") == "02") rad.Impression = r.pCol("chTxt");
@@ -800,7 +800,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n ORDER BY chRsPDate";
 
 
-            DataTable dt = _db.executesqldt(SQL);
+            DataTable dt = _db.Query(SQL);
 
             // 不在 SQL 裡挑第七位，全部撈回來再用程式碼濾，後面的檢驗／檢查也就只查濾剩的住院日
             List<DataRow> rows = new List<DataRow>();
@@ -816,12 +816,12 @@ namespace WebDaySurgery.Controllers
             SQL = "SELECT chMRNo, chTelH, chTelO";
             SQL += "\n FROM DB_OPD..OpdMRBasicTbl";
             SQL += $"\n WHERE chMRNo = '{sMrNo}' ";
-            DataRow? basic = _db.executesqldt(SQL).AsEnumerable().FirstOrDefault();
+            DataRow? basic = _db.Query(SQL).AsEnumerable().FirstOrDefault();
 
             SQL = "SELECT chMRNo, chPCell, chECell";
             SQL += "\n FROM DB_OPD..OpdMRBasic2Tbl";
             SQL += $"\n WHERE chMRNo = '{sMrNo}' ";
-            DataRow? basic2 = _db.executesqldt(SQL).AsEnumerable().FirstOrDefault();
+            DataRow? basic2 = _db.Query(SQL).AsEnumerable().FirstOrDefault();
 
             // 六個來源由左到右串起來，空的丟掉、重複的只留第一個，畫面上就不會出現兩格一樣的號碼
             List<string> Tels(DataRow r)
@@ -852,7 +852,7 @@ namespace WebDaySurgery.Controllers
             SQL += "\n and chOrStat <> '0' ";
             // 主鍵是 chOrMrNo + chOrCDate (建檔時間 13 碼)，照它排，下面字典留到最後的就是最新登錄那筆
             SQL += "\n order by chOrCDate ";
-            DataTable dtSch = _db.executesqldt(SQL);
+            DataTable dtSch = _db.Query(SQL);
 
             // 這裡的區間橫跨三個月，同一個人本來就會有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
@@ -913,7 +913,7 @@ namespace WebDaySurgery.Controllers
                 // 畫面只看這幾類，其他類別不用撈回來
                 SQL += $"\n   AND A.chTeamNo IN ({labTeamNos.pJoinWithQuote()}) ";
 
-                DataTable dtLw = _db.executesqldt(SQL);
+                DataTable dtLw = _db.Query(SQL);
 
                 //檢查／備血
                 // 這兩欄都看門診醫令，同一份寬撈的資料在 C# 裡分兩份，一天只打一趟 DB。
@@ -985,7 +985,7 @@ namespace WebDaySurgery.Controllers
             SQL += $"\n chRsPDate BETWEEN '{sDateS}' AND '{sDateE}' ";
             SQL += $"\n AND chRsPSec IN ('06', '08', 'VC') ";
             //SQL += $"\n AND chRsAdmCaseNo IS NULL";
-            DataTable dt = _db.executesqldt(SQL);
+            DataTable dt = _db.Query(SQL);
 
             // 不在 SQL 裡挑第七位，全部撈回來再用程式碼濾，後面的排程／檢驗／檢查也就只查濾剩的人
             List<DataRow> rows = new List<DataRow>();
@@ -1009,13 +1009,13 @@ namespace WebDaySurgery.Controllers
             SQL += "\n FROM DB_OPD..OpdMRBasicTbl";
             SQL += "\n WHERE";
             SQL += $"\n chMRNo in ({MrList.pJoinWithQuote()}) ";
-            DataTable dtMRBasic = _db.executesqldt(SQL);
+            DataTable dtMRBasic = _db.Query(SQL);
 
             SQL = "SELECT chMRNo, chPCell, chECell";
             SQL += "\n FROM DB_OPD..OpdMRBasic2Tbl";
             SQL += "\n WHERE";
             SQL += $"\n chMRNo in ({MrList.pJoinWithQuote()}) ";
-            DataTable dtMRBasic2 = _db.executesqldt(SQL);
+            DataTable dtMRBasic2 = _db.Query(SQL);
 
             // 一個病歷號一列，重複的留最後一筆
             Dictionary<string, DataRow> basics = new Dictionary<string, DataRow>();
@@ -1057,7 +1057,7 @@ namespace WebDaySurgery.Controllers
             SQL += "\n and chOrStat <> '0' ";
             // 主鍵是 chOrMrNo + chOrCDate (建檔時間 13 碼)，照它排，下面字典留到最後的就是最新登錄那筆
             SQL += "\n order by chOrCDate ";
-            DataTable dtSch = _db.executesqldt(SQL);
+            DataTable dtSch = _db.Query(SQL);
 
             // BedBooking 一次查三天，同一個病歷號可能有好幾天的預約，
             // 病歷號要配上住院日當 key，才不會把別天的刀貼到這一列
@@ -1097,7 +1097,7 @@ namespace WebDaySurgery.Controllers
             // 畫面只看這幾類，其他類別不用撈回來
             SQL += $"\n   AND A.chTeamNo IN ({labTeamNos.pJoinWithQuote()}) ";
 
-            DataTable dtLw = _db.executesqldt(SQL);
+            DataTable dtLw = _db.Query(SQL);
 
             Dictionary<string, List<ChkItem>> labChks = BuildLabChk(dtLw, MrList);
 
@@ -1158,7 +1158,7 @@ namespace WebDaySurgery.Controllers
             // DC = 作廢，開了又刪掉的不算開過
             SQL += $"\n and A.chOp4Stat <> 'DC' ";
 
-            return _db.executesqldt(SQL);
+            return _db.Query(SQL);
         }
 
         /// <summary>

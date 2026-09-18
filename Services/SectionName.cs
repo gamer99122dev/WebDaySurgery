@@ -23,7 +23,7 @@ namespace WebDaySurgery.Services
         {
             e.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8);
 
-            DataTable dt = _db.executesqldt("SELECT chSecNo, chSecName FROM DB_GEN..GenSectionTbl");
+            DataTable dt = _db.Query("SELECT chSecNo, chSecName FROM DB_GEN..GenSectionTbl");
 
             // 用 indexer 不用 ToDictionary，代碼萬一重複才不會直接炸掉
             Dictionary<string, string> map = new Dictionary<string, string>();
