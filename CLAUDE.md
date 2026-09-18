@@ -24,14 +24,14 @@ C# 寫法一律照這份，不要用自己習慣的寫法：
 
 ```csharp
 dateFrom.pRyyymmdd()   // 不是 new GenerateDateString(dt).Ryyymmdd
-str.pSQLValidator()    // 不是 new checkSQLInjection().SQLValidator(s)
+str.pSQLValidator()    // 不是 new SqlEscape().SQLValidator(s)
 ```
 
-常用：`pRyyymmdd` `pSQLValidator` `pToDateTime` `pToInt` `pToDouble` `pLeft` `pMid` `pIn` `pCol` `pAge` `pJoin` `pJoinWithQuote` `pNullOrTrim` `pReplaceEUDC` `pMapValue` `pToDayOfWeekCh`。上百個，用之前先看 `StringTool.cs`。
+常用：`pRyyymmdd` `pSQLValidator` `pToDateTime` `pToInt` `pToDouble` `pLeft` `pMid` `pIn` `pCol` `pAge` `pJoin` `pJoinWithQuote` `pNullOrTrim` `pReplaceEUDC` `pMapValue` `pToDayOfWeekCh`。上百個，在 `WebToolNet/Extensions/` 一檔一類、檔名＝被擴充的型別（`StringTool.cs` 是 string、`DateTimeUtil.cs` 是 DateTime、`DataRowTool.cs` 是 DataRow…），用之前先 `grep -rn "pXxx" WebToolNet/Extensions/`。
 
 ### 資料存取
 
-- 走 `WebToolNet.DBConn.DBConn`（DI 注入），`executesqldt(SQL)` 回 `DataTable`。
+- 走 `WebToolNet.Data.DBConn`（DI 注入），`Query(SQL)` 回 `DataTable`。
 - 不參數化，進 SQL 的字串一律 `pSQLValidator()` 跳脫。
 - 取值一律 `r.pCol("欄位名")`（會自動 Trim），不要 `r["欄位名"].ToString()`。
 
