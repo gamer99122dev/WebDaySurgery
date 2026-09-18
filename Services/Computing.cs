@@ -293,7 +293,7 @@ namespace WebDaySurgery.Services
             string result = "";
             WebToolNet.Validation.CheckDate checkDate = new WebToolNet.Validation.CheckDate();
 
-            if (checkDate.isTWDate(strTWD_LMP) == true)
+            if (checkDate.IsTWDate(strTWD_LMP) == true)
             {
                 //WebToolNet.Dates.DateComputing dateComputing = new WebToolNet.Dates.DateComputing();
                 //dateComputing.
@@ -319,7 +319,7 @@ namespace WebDaySurgery.Services
 
             string result = "";
             WebToolNet.Validation.CheckDate checkDate = new WebToolNet.Validation.CheckDate();
-            if (checkDate.isTWDate(sBaseDate) == true && checkDate.isTWDate(sEDC) == true)
+            if (checkDate.IsTWDate(sBaseDate) == true && checkDate.IsTWDate(sEDC) == true)
             {
                 //if (sEDC.pToDateTime() > sBaseDate.pToDateTime())
                 //{
