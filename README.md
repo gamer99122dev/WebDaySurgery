@@ -1,6 +1,6 @@
 ﻿# WebDaySurgery
 
-日間手術病床預約／檢驗結果查詢。ASP.NET Core MVC (.NET 10) + MSSQL，共用庫在隔壁的 [WebToolNet](https://github.com/gamer99122dev/WebToolNet)。
+日間手術病床預約／檢驗結果查詢。ASP.NET Core MVC (.NET 10) + MSSQL，共用庫在隔壁的 WebToolNet。
 
 ## 第一次啟動
 
