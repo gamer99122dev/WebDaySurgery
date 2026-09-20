@@ -21,15 +21,14 @@
 
 ## 部署到正式主機
 
-步驟照 [WebToolNet README](../WebToolNet/README.md) 第 5 節，這個站的值：
+照 [WebToolNet README](../WebToolNet/README.md) 第 5 節，用 `Deploy\部署網站.cmd`。這個站要知道的值：
 
 | 項目 | 值 |
 | --- | --- |
-| 發布目標 | `C:\inetpub\wwwroot\WebDaySurgery`（`Properties/PublishProfiles/FolderProfile.pubxml`） |
-| 應用程式集區 | `WebDaySurgery`，`icacls` 給 `IIS AppPool\WebDaySurgery:(R)` |
-| 集區環境變數 | `ASPNETCORE_ENVIRONMENT=Production`、`Database__Target=Production` |
-| 正式 DB | `Server=172.17.2.31;Database=DB_OPD`，密文檔 `C:\ProgramData\HIS\db.dat`（全機共用，別的站建過就只補 `icacls`） |
+| 網站名稱 | `WebDaySurgery`（發布資料夾名＝IIS 應用程式＝集區，網址 `http://<主機>/WebDaySurgery`） |
+| 發布 | Visual Studio 右鍵專案 → 發佈（`Properties/PublishProfiles`）；本機 IIS 直接發到 `C:\inetpub\wwwroot\WebDaySurgery` |
+| 正式 DB | 主機 `172.17.2.31`、資料庫 `DB_OPD`，SQL 帳號密碼找 IT。密文檔 `C:\WebConfig\db.dat` 全機共用，這台建過就不會再問 |
 
-確認：啟動 log 有 `DB Target=Production Server=172.17.2.31 Catalog=DB_OPD`，畫面沒有紅字「測試環境」。
+集區、環境變數、密文檔權限都是工具設的，不用手動。確認：畫面沒有紅字「測試環境」；要看連到哪台 DB 照 WebToolNet README 5.5。
 
 換密碼、常見錯誤看 WebToolNet README 第 5 節；為什麼這樣設計、TLS 憑證待辦看 [`Docs/NET10-MVC-MSSQL-DPAPI-Spec.md`](../WebToolNet/Docs/NET10-MVC-MSSQL-DPAPI-Spec.md)。
